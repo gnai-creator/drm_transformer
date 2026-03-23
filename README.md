@@ -1,6 +1,12 @@
 # DRM Transformer
 
-**~350M params** | **AGPL-3.0** | **Python 3.10+** | **PyTorch 2.1+**
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Commercial License](https://img.shields.io/badge/License-Commercial-orange.svg)](LICENSE-COMMERCIAL.md)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab.svg)](https://python.org)
+[![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org)
+[![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/)
+[![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
+[![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#referencias)
 
 Decoder-only Transformer onde o espaco de embeddings vive num Directional
 Relational Manifold (DRM) com tensor metrico aprendido G(x) dependente de
