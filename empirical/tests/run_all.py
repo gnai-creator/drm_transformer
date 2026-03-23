@@ -1,5 +1,6 @@
 """Runner master: executa todos os testes, salva results.json e gera figuras."""
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -9,7 +10,7 @@ sys.path.insert(0, str(_test_dir))
 sys.path.insert(0, str(_figures_dir))
 
 import logging
-from utils import load_results, save_results, RESULTS_PATH, logger
+from utils import load_results, save_results, RESULTS_PATH, logger, set_checkpoint
 
 # Importar modulos de teste
 import test_axes_projection
@@ -26,6 +27,19 @@ import plot_combined
 
 
 def main():
+    parser = argparse.ArgumentParser(description="DRM Transformer - Avaliacao Empirica")
+    parser.add_argument(
+        "--checkpoint", type=str, default=None,
+        help="Checkpoint .pt para avaliar (sem = pesos aleatorios)",
+    )
+    args = parser.parse_args()
+
+    if args.checkpoint:
+        set_checkpoint(args.checkpoint)
+        logger.info("[CHECKPOINT] %s", args.checkpoint)
+    else:
+        logger.info("[MODEL] Sem checkpoint — pesos aleatorios")
+
     logger.info("=" * 60)
     logger.info("DRM Transformer - Avaliacao Empirica Completa")
     logger.info("=" * 60)

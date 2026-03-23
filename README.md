@@ -281,8 +281,11 @@ print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
 ### Validacao Empirica (testes + figuras)
 
 ```bash
-# Roda 4 testes + gera 5 figuras (PCA, t-SNE, heatmap, separation, combined)
+# Pesos aleatorios (valida propriedades geometricas da arquitetura)
 python empirical/tests/run_all.py
+
+# Com checkpoint treinado (avalia modelo real)
+python empirical/tests/run_all.py --checkpoint checkpoints/1m/final.pt
 ```
 
 Saidas:

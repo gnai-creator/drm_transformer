@@ -26,6 +26,15 @@ SEEDS = [42, 123, 7]
 RESULTS_PATH = _ROOT / "empirical" / "results.json"
 FIGURES_DIR = _ROOT / "empirical" / "figures"
 
+# Checkpoint global — setado por run_all.py via --checkpoint
+_CHECKPOINT_PATH: Optional[str] = None
+
+
+def set_checkpoint(path: Optional[str]) -> None:
+    """Define checkpoint global para create_model usar."""
+    global _CHECKPOINT_PATH
+    _CHECKPOINT_PATH = path
+
 
 def set_seed(seed: int = 42) -> None:
     """Fixa seeds para reprodutibilidade."""
@@ -45,28 +54,73 @@ def create_model(
 ) -> Tuple[DRMTransformer, DRMTransformerConfig]:
     """Cria modelo DRM Transformer, opcionalmente carregando checkpoint.
 
+    Se checkpoint_path nao for fornecido, usa o checkpoint global
+    definido por set_checkpoint() (via --checkpoint no run_all.py).
+    Sem checkpoint, cria modelo com pesos aleatorios.
+
     Args:
         checkpoint_path: Caminho para checkpoint .pt (opcional).
 
     Returns:
         Tupla (modelo, config).
     """
-    config = DRMTransformerConfig(
-        d_model=64, n_heads=4, n_layers=4, d_ff=128,
-        d_manifold=8, metric_hidden=32, metric_rank=4,
-        gamma_enabled=True, gamma_c=4.0, gamma_alpha=0.0,
-        gravity_enabled=True, gravity_strength=0.1,
-        max_seq_len=64, vocab_size=50257,
-    )
+    ckpt = checkpoint_path or _CHECKPOINT_PATH
 
-    model = DRMTransformer(config)
+    # Se checkpoint existe, extrair config dele
+    if ckpt and os.path.exists(ckpt):
+        state = torch.load(ckpt, map_location="cpu", weights_only=False)
+        if "config" in state:
+            cfg = state["config"]
+            config = DRMTransformerConfig(
+                d_model=cfg.get("d_model", 64),
+                n_heads=cfg.get("n_heads", 4),
+                n_layers=cfg.get("n_layers", 4),
+                d_ff=cfg.get("d_ff", 128),
+                d_manifold=cfg.get("d_manifold", 8),
+                metric_hidden=cfg.get("metric_hidden", 32),
+                metric_rank=cfg.get("metric_rank", 4),
+                gamma_enabled=cfg.get("gamma_enabled", True),
+                gamma_c=cfg.get("gamma_c", 4.0),
+                gamma_alpha=cfg.get("gamma_alpha", 0.0),
+                gravity_enabled=cfg.get("gravity_enabled", True),
+                gravity_strength=cfg.get("gravity_strength", 0.1),
+                gravity_n_rff=cfg.get("gravity_n_rff", 64),
+                n_anchors=cfg.get("n_anchors", 6),
+                max_seq_len=cfg.get("max_seq_len", 64),
+                vocab_size=cfg.get("vocab_size", 50257),
+                variable_dim=cfg.get("variable_dim", True),
+            )
+            logger.info("[CONFIG] Config extraida do checkpoint")
+        else:
+            config = DRMTransformerConfig(
+                d_model=64, n_heads=4, n_layers=4, d_ff=128,
+                d_manifold=8, metric_hidden=32, metric_rank=4,
+                gamma_enabled=True, gamma_c=4.0, gamma_alpha=0.0,
+                gravity_enabled=True, gravity_strength=0.1,
+                max_seq_len=64, vocab_size=50257,
+            )
 
-    if checkpoint_path and os.path.exists(checkpoint_path):
-        state = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-        if "model_state_dict" in state:
-            state = state["model_state_dict"]
-        model.load_state_dict(state, strict=False)
-        logger.info("Checkpoint carregado: %s", checkpoint_path)
+        model = DRMTransformer(config)
+        model_state = state.get("model_state_dict", state)
+        # Limpar prefixo module. de DDP
+        cleaned = {}
+        for k, v in model_state.items():
+            cleaned[k.removeprefix("module.")] = v
+        model.load_state_dict(cleaned, strict=False)
+        logger.info("[CHECKPOINT] Carregado: %s", ckpt)
+    else:
+        config = DRMTransformerConfig(
+            d_model=64, n_heads=4, n_layers=4, d_ff=128,
+            d_manifold=8, metric_hidden=32, metric_rank=4,
+            gamma_enabled=True, gamma_c=4.0, gamma_alpha=0.0,
+            gravity_enabled=True, gravity_strength=0.1,
+            max_seq_len=64, vocab_size=50257,
+        )
+        model = DRMTransformer(config)
+        if ckpt:
+            logger.warning("[CHECKPOINT] Nao encontrado: %s — usando pesos aleatorios", ckpt)
+        else:
+            logger.info("[MODEL] Pesos aleatorios (sem checkpoint)")
 
     model.eval()
     return model, config
