@@ -19,7 +19,7 @@ early_stopping_patience: 5
 # --- Manifold DRM ---
 d_manifold: 8
 metric_hidden: 32
-metric_rank: 4
+metric_rank: 5
 n_quad: 0
 
 # --- Gamma-Scaling ---

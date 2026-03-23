@@ -18,7 +18,7 @@ eval_interval: 500
 # --- Manifold DRM ---
 d_manifold: 4
 metric_hidden: 16
-metric_rank: 2
+metric_rank: 4
 n_quad: 0
 
 # --- Gamma-Scaling ---
