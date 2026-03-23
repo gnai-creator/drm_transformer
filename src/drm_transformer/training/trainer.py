@@ -228,15 +228,23 @@ class DRMTrainer:
 
         return metrics
 
-    def _compute_drm_losses(self) -> torch.Tensor:
+    def _compute_drm_losses(self, input_ids: torch.Tensor) -> torch.Tensor:
         """Computa losses DRM (metric regularization + diversity).
+
+        Usa coordenadas reais do batch (via q_to_manifold do block 0)
+        em vez de coords aleatorias. O .detach() nas coords impede
+        gradiente de fluir de volta para o caminho de atencao.
+
+        Args:
+            input_ids: [B, T] tokens do batch actual.
 
         Returns:
             Loss escalar adicional.
         """
         drm_loss = torch.tensor(0.0, device=self.device)
 
-        metric_net = getattr(self.raw_model, "metric_net", None)
+        model = self.raw_model
+        metric_net = getattr(model, "metric_net", None)
         if metric_net is None:
             return drm_loss
 
@@ -246,10 +254,23 @@ class DRMTrainer:
         lambda_div = self.config.get("lambda_metric_diversity", 0.05)
         warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
 
-        coords = torch.rand(
-            1, 8, metric_net.dim, device=self.device,
-        )
-        G = metric_net(coords)
+        # Extrair coords reais do batch via block 0
+        with torch.no_grad():
+            x = model.token_emb(input_ids)
+            if model.dim_gate is not None:
+                x, _ = model.dim_gate(x)
+            block0 = model.blocks[0]
+            x_normed = block0.norm1(x)
+            B, T = input_ids.shape
+            q = block0.attn.q_proj(x_normed)
+            q = q.view(B, T, block0.attn.n_heads, block0.attn.d_head)
+            q = q.transpose(1, 2)
+            coords = torch.sigmoid(block0.attn.q_to_manifold(q[:, 0]))
+
+        # coords.detach() ja garantido pelo no_grad acima
+        # Mas G precisa de grad para MetricNet aprender
+        G = metric_net(coords.detach().reshape(-1, metric_net.dim))
+        G = G.view(B, T, metric_net.dim, metric_net.dim)
 
         drm_loss = drm_loss + lambda_reg * metric_regularization(G)
 
@@ -310,7 +331,7 @@ class DRMTrainer:
                     logits, loss = self.model(input_ids, targets)
                     loss = loss / accum
 
-                    drm_loss = self._compute_drm_losses() / accum
+                    drm_loss = self._compute_drm_losses(input_ids) / accum
                     loss = loss + drm_loss
 
                 if self.scaler:
