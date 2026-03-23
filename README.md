@@ -8,6 +8,22 @@
 [![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
 [![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
 
+## Indice
+
+- [Transformer Padrao vs DRM Transformer](#transformer-padrao-vs-drm-transformer)
+- [Inovacoes Principais](#inovacoes-principais)
+- [Arquitetura](#arquitetura)
+- [DRMTransformerConfig](#drmtransformerconfig)
+- [Loss Functions](#loss-functions-regularizacao-geometrica)
+- [Quick Start](#quick-start)
+- [Scaling Configs](#scaling-configs)
+- [Papers](#papers)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Licenca](#licenca)
+- [Citacao](#citacao)
+
+---
+
 Decoder-only Transformer onde o espaco de embeddings vive num Directional
 Relational Manifold (DRM) com tensor metrico aprendido G(x) dependente de
 posicao, curvatura gravitacional derivada da massa dos tokens, e
