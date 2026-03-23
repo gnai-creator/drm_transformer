@@ -57,51 +57,53 @@ ANCHOR_NAMES = [
     "grounding",   # factualidade, evidencia
 ]
 
-# Primeiras 4 dims de cada anchor (dims extras preenchidas com 0.5)
-_ANCHOR_SEEDS = [
-    [0.1, 0.1, 0.5, 0.9],   # truth: baixa incerteza, alta qualidade
-    [0.9, 0.9, 0.5, 0.2],   # ignorance: alta incerteza epistemica
-    [0.1, 0.5, 0.1, 0.8],   # safety: seguranca, gamma alto longe daqui
-    [0.5, 0.5, 0.9, 0.5],   # complexity: alta complexidade
-    [0.8, 0.2, 0.5, 0.5],   # creativity: exploracao
-    [0.2, 0.2, 0.2, 0.7],   # grounding: factualidade
-]
-
-
 def create_semantic_anchors(
     d_manifold: int,
     n_anchors: int = 6,
 ) -> torch.Tensor:
     """Cria anchors com posicoes semanticas no manifold.
 
-    Inicializa com significado interpretavel mas mantidos como
-    nn.Parameter para o optimizer ajustar durante treino.
+    Usa funcoes periodicas que escalam para qualquer d_manifold:
+    cada anchor ocupa um "canto" semantico do hipercubo [0,1]^d.
+    Mantidos como nn.Parameter para o optimizer ajustar durante treino.
 
-    Os primeiros min(4, d_manifold) dims tem valores semanticos;
-    dims restantes preenchidas com 0.5 (neutro).
-
-    Se n_anchors > 6, extras inicializados com rand.
-    Se n_anchors <= 6, usa os primeiros n_anchors.
+    Padroes geometricos:
+    - truth:      rampa crescente (baixa incerteza -> alta qualidade)
+    - ignorance:  rampa decrescente (oposto de truth)
+    - safety:     alternado baixo-alto (fronteira de seguranca)
+    - complexity: sino (pico no centro do espaco)
+    - creativity: alternado alto-baixo (oposto de safety)
+    - grounding:  baixo uniforme com pico na ultima dim
 
     Args:
-        d_manifold: Dimensao do manifold.
-        n_anchors: Numero de anchors.
+        d_manifold: Dimensao do manifold (4 a 40+).
+        n_anchors: Numero de anchors (default 6).
 
     Returns:
         Tensor [n_anchors, d_manifold] em [0, 1].
     """
-    anchors = torch.full((n_anchors, d_manifold), 0.5)
+    import math
 
-    n_seeds = min(n_anchors, len(_ANCHOR_SEEDS))
-    seed_dims = min(4, d_manifold)
+    semantic_fns = [
+        lambda i, d: 0.1 + 0.8 * (i / max(d - 1, 1)),                       # truth
+        lambda i, d: 0.9 - 0.8 * (i / max(d - 1, 1)),                       # ignorance
+        lambda i, d: 0.1 if i % 2 == 0 else 0.9,                            # safety
+        lambda i, d: 0.5 + 0.4 * math.sin(math.pi * i / max(d - 1, 1)),     # complexity
+        lambda i, d: 0.9 if i % 2 == 0 else 0.1,                            # creativity
+        lambda i, d: 0.2 + 0.6 * (1.0 if i == d - 1 else 0.0),              # grounding
+    ]
 
-    for i in range(n_seeds):
-        anchors[i, :seed_dims] = torch.tensor(_ANCHOR_SEEDS[i][:seed_dims])
+    anchors = torch.zeros(n_anchors, d_manifold)
 
-    # Extras aleatorios (se n_anchors > 6)
-    if n_anchors > len(_ANCHOR_SEEDS):
-        anchors[len(_ANCHOR_SEEDS):] = torch.rand(
-            n_anchors - len(_ANCHOR_SEEDS), d_manifold,
+    n_semantic = min(n_anchors, len(semantic_fns))
+    for a in range(n_semantic):
+        for i in range(d_manifold):
+            anchors[a, i] = semantic_fns[a](i, d_manifold)
+
+    # Extras aleatorios se n_anchors > 6
+    if n_anchors > len(semantic_fns):
+        anchors[len(semantic_fns):] = torch.rand(
+            n_anchors - len(semantic_fns), d_manifold,
         )
 
     return anchors
