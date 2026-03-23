@@ -88,7 +88,7 @@ def _hardware_info() -> Dict[str, Any]:
         hw["gpu_count"] = torch.cuda.device_count()
         hw["gpu_name"] = torch.cuda.get_device_name(0)
         hw["gpu_memory_gb"] = round(
-            torch.cuda.get_device_properties(0).total_mem / (1024 ** 3), 1
+            torch.cuda.get_device_properties(0).total_memory / (1024 ** 3), 1
         )
     else:
         hw["gpu_count"] = 0
