@@ -90,7 +90,7 @@ def create_semantic_anchors(
         lambda i, d: 0.1 if i % 2 == 0 else 0.9,                            # safety
         lambda i, d: 0.5 + 0.4 * math.sin(math.pi * i / max(d - 1, 1)),     # complexity
         lambda i, d: 0.9 if i % 2 == 0 else 0.1,                            # creativity
-        lambda i, d: 0.2 + 0.6 * (1.0 if i == d - 1 else 0.0),              # grounding
+        lambda i, d: 0.2 + 0.6 * (1.0 if i >= d - 2 else 0.0),              # grounding
     ]
 
     anchors = torch.zeros(n_anchors, d_manifold)
