@@ -10,8 +10,8 @@ Obrigado pelo interesse em contribuir com o DRM Transformer!
 
 2. **Ambiente de desenvolvimento**:
    ```bash
-   git clone https://github.com/gnai-creator/drm-transformer.git
-   cd drm-transformer
+   git clone https://github.com/gnai-creator/drm_transformer.git
+   cd drm_transformer
    python -m venv .venv
    source .venv/bin/activate  # Linux/Mac
    # .venv\Scripts\activate   # Windows

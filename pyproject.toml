@@ -47,11 +47,19 @@ eval = [
     "matplotlib",
 ]
 all = [
-    "drm-transformer[dev,data,eval]",
+    "pytest>=7.0",
+    "pytest-cov",
+    "tiktoken",
+    "datasets",
+    "tqdm",
+    "ripser",
+    "scikit-learn",
+    "scipy",
+    "matplotlib",
 ]
 
 [project.urls]
-Repository = "https://github.com/gnai-creator/drm-transformer"
+Repository = "https://github.com/gnai-creator/drm_transformer"
 
 [tool.setuptools.packages.find]
 where = ["src"]

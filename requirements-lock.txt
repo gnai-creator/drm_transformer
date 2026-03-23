@@ -25,7 +25,6 @@ dill==0.4.1
 distro==1.9.0
 dnspython==2.8.0
 docstring_parser==0.17.0
--e git+ssh://git@github.com/gnai-creator/drm_transformer.git@17c852153012a44cae0e74092cbd56fc80234873#egg=drm_transformer
 email-validator==2.3.0
 fastapi==0.135.2
 filelock==3.25.2
