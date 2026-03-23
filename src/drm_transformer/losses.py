@@ -33,14 +33,18 @@ def metric_regularization(G: torch.Tensor) -> torch.Tensor:
     return condition + 0.1 * scale
 
 
-def metric_diversity_loss(G: torch.Tensor) -> torch.Tensor:
-    """Penaliza G(x) constante entre posicoes.
+def metric_diversity_loss(
+    G: torch.Tensor,
+    target_var: float = 0.001,
+) -> torch.Tensor:
+    """Penaliza G(x) com variancia longe do alvo.
 
-    Forca variancia espacial da metrica: -log(var(G) + eps),
-    evitando espaco plano sem curvatura aprendida.
+    Atractor estavel em target_var: gradiente empurra para cima
+    quando var < target e para baixo quando var > target.
 
     Args:
         G: [B, T, D, D] tensor metrico.
+        target_var: Variancia alvo (default 0.001).
 
     Returns:
         Loss escalar.
@@ -50,4 +54,4 @@ def metric_diversity_loss(G: torch.Tensor) -> torch.Tensor:
     B, T, D, _ = G.shape
     G_flat = G.reshape(B, T, D * D)
     var = G_flat.var(dim=1).mean()
-    return (-torch.log(var + 1e-4)).clamp(min=0)
+    return (var - target_var).pow(2)

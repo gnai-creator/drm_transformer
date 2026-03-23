@@ -41,3 +41,4 @@ metric_diversity_warmup_steps: 10000
 save_dir: checkpoints/multilingual_1.3b
 save_interval: 500
 log_interval: 50
+target_metric_var: 0.001

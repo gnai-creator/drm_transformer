@@ -275,7 +275,8 @@ class DRMTrainer:
         drm_loss = drm_loss + lambda_reg * metric_regularization(G)
 
         if self.global_step >= warmup_div:
-            drm_loss = drm_loss + lambda_div * metric_diversity_loss(G)
+            target_var = self.config.get("target_metric_var", 0.001)
+            drm_loss = drm_loss + lambda_div * metric_diversity_loss(G, target_var)
 
         return drm_loss
 
