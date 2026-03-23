@@ -1,0 +1,37 @@
+# ~1M params - Smoke test / debug
+vocab_size: 50257
+d_model: 64
+n_heads: 2
+n_layers: 4
+d_ff: 256
+max_seq_len: 256
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.001
+warmup_steps: 100
+total_tokens: 10_000_000
+mixed_precision: none
+gradient_accumulation_steps: 1
+eval_interval: 500
+
+# --- Manifold DRM ---
+d_manifold: 4
+metric_hidden: 16
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 2.0
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.1
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.05
+metric_diversity_warmup_steps: 500

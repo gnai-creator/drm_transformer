@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "Se voce usar este software, por favor cite-o como abaixo."
+type: software
+title: "DRM Transformer"
+abstract: >-
+  Decoder-only Transformer onde o espaco de embeddings vive num
+  Directional Relational Manifold (DRM) com tensor metrico aprendido
+  G(x) dependente de posicao, curvatura gravitacional derivada da
+  massa dos tokens, e dimensionalidade variavel por token. Baseado
+  em tres papers: DRM V1.1, Geometry of Consciousness V1.2,
+  DRM Relativistic Dynamics.
+authors:
+  - family-names: "Muniz"
+    given-names: "Felipe Maya"
+    email: "felipe@truthagi.ai"
+version: "0.1.0"
+date-released: "2026-03-22"
+license: "AGPL-3.0-or-later"
+repository-code: "https://github.com/gnai-creator/drm-transformer"
+keywords:
+  - drm
+  - geodesic-attention
+  - riemannian-manifold
+  - gravitational-transformer
+  - variable-dimensionality

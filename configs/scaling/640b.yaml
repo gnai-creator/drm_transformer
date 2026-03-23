@@ -1,0 +1,43 @@
+# ~640B params - Extreme scale (MoE candidate)
+vocab_size: 50257
+d_model: 16384
+n_heads: 128
+n_layers: 126
+d_ff: 65536
+max_seq_len: 8192
+dropout: 0.0
+bias: false
+batch_size: 1
+learning_rate: 0.00006
+warmup_steps: 4000
+total_tokens: 10_000_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 512
+gradient_checkpointing: true
+distributed: true
+fsdp: true
+fsdp_sharding: full
+compile_model: true
+eval_interval: 1000
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 40
+metric_hidden: 160
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 6.32
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.005
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.00005
+lambda_metric_diversity: 0.005
+metric_diversity_warmup_steps: 100000

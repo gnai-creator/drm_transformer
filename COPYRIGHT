@@ -1,0 +1,22 @@
+Copyright (C) 2026 Felipe Maya Muniz
+Email: felipe@truthagi.ai
+
+Todos os direitos reservados conforme os termos da licenca aplicavel.
+
+Este software e licenciado sob licenca dual:
+
+  1. GNU Affero General Public License v3.0 ou posterior (AGPL-3.0-or-later)
+     Ver arquivo LICENSE para o texto completo.
+
+  2. Licenca Comercial (mediante contrato)
+     Ver arquivo LICENSE-COMMERCIAL.md para detalhes.
+
+O uso deste software implica aceitacao de uma das licencas acima.
+
+---
+
+Componentes de terceiros incluidos neste projeto estao sujeitos as suas
+proprias licencas:
+
+  - PyTorch (BSD-3-Clause) - https://github.com/pytorch/pytorch
+  - tiktoken (MIT) - https://github.com/openai/tiktoken

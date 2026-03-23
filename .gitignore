@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# Ambiente
+.env
+.venv/
+venv/
+
+# Checkpoints e dados (grandes demais pro git)
+checkpoints/
+*.pt
+*.ckpt
+*.safetensors
+data/
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Wandb
+wandb/

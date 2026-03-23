@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "drm-transformer"
+version = "0.1.0"
+description = "Decoder-only Transformer com geometria geodesica DRM e gravidade"
+readme = "README.md"
+license = {text = "AGPL-3.0-or-later"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Felipe Maya Muniz", email = "felipe@truthagi.ai"},
+]
+keywords = [
+    "transformer", "drm", "geodesic", "riemannian",
+    "gravitational", "attention", "llm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "torch>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+data = [
+    "tiktoken",
+    "datasets",
+    "tqdm",
+]
+
+[project.urls]
+Repository = "https://github.com/gnai-creator/drm-transformer"
+
+[tool.setuptools.packages.find]
+where = ["src"]

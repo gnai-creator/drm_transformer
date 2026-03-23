@@ -1,0 +1,43 @@
+# ~162B params - Frontier scale
+vocab_size: 50257
+d_model: 12288
+n_heads: 96
+n_layers: 96
+d_ff: 49152
+max_seq_len: 4096
+dropout: 0.0
+bias: false
+batch_size: 1
+learning_rate: 0.0001
+warmup_steps: 2000
+total_tokens: 3_500_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 256
+gradient_checkpointing: true
+distributed: true
+fsdp: true
+fsdp_sharding: full
+compile_model: true
+eval_interval: 500
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 32
+metric_hidden: 128
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 5.66
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.008
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.0001
+lambda_metric_diversity: 0.008
+metric_diversity_warmup_steps: 50000

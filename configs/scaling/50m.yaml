@@ -1,0 +1,38 @@
+# ~50M params - GPT-2 Small / single GPU training
+vocab_size: 50257
+d_model: 512
+n_heads: 8
+n_layers: 8
+d_ff: 2048
+max_seq_len: 1024
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.0006
+warmup_steps: 1000
+total_tokens: 2_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 4
+eval_interval: 500
+early_stopping_patience: 8
+
+# --- Manifold DRM ---
+d_manifold: 12
+metric_hidden: 48
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 3.46
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.08
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.05
+metric_diversity_warmup_steps: 2000
