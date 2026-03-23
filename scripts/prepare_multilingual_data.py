@@ -1,14 +1,27 @@
 """Prepara dados multilingues para treino do DRM Transformer.
 
 Pipeline streaming em 2 passes (memoria constante):
-  Pass 1: Stream Wikipedia -> tokeniza -> conta freq -> salva shards raw
+  Pass 1: Stream dados -> tokeniza -> conta freq -> salva shards raw
   Pass 2: Constroi vocab mapping -> remapeia shards raw -> salva shards finais
 
+Fontes de dados:
+  - culturax (default): CulturaX (uonlp/CulturaX) - 6.3T tokens, 167 langs
+    Requer: aceitar termos em huggingface.co/datasets/uonlp/CulturaX + login
+  - wikipedia: Wikipedia multilingual (wikimedia/wikipedia) - publico, sem auth
+
 Uso:
-    # Tudo de uma vez
+    # CulturaX (rapido, recomendado para treino real)
     python scripts/prepare_multilingual_data.py \
         --output-dir data/multilingual \
         --max-tokens 20000000000 \
+        --vocab-size 50000 \
+        --langs en,pt,es,fr,de
+
+    # Wikipedia (publico, bom para testes)
+    python scripts/prepare_multilingual_data.py \
+        --source wikipedia \
+        --output-dir data/multilingual \
+        --max-tokens 50000000 \
         --vocab-size 50000 \
         --langs en,pt,es,fr,de
 
@@ -23,8 +36,7 @@ Uso:
         --output-dir data/multilingual \
         --max-tokens 4000000000 \
         --vocab-size 50000 \
-        --langs pt \
-        --resume
+        --langs pt --resume
 
     # Finalizar (remapeia tudo)
     python scripts/prepare_multilingual_data.py \
@@ -114,16 +126,32 @@ def _save_freq(output_dir: Path, freq: Counter):
         json.dump({str(k): v for k, v in freq.items()}, f)
 
 
+def _load_dataset_streaming(source: str, lang: str):
+    """Carrega dataset em modo streaming conforme a fonte."""
+    from datasets import load_dataset
+
+    if source == "culturax":
+        return load_dataset(
+            "uonlp/CulturaX", lang,
+            split="train", streaming=True,
+        )
+    else:  # wikipedia
+        wiki_config = WIKI_LANGS.get(lang, f"20231101.{lang}")
+        return load_dataset(
+            "wikimedia/wikipedia", wiki_config,
+            split="train", streaming=True,
+        )
+
+
 def pass1_stream_and_save_raw(
     langs: list,
     max_tokens: int,
     output_dir: Path,
     shard_size: int,
     resume: bool,
+    source: str = "culturax",
 ):
     """Pass 1: stream textos, tokeniza, salva shards raw uint32, conta freq."""
-    from datasets import load_dataset
-
     raw_dir = _raw_dir(output_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -144,15 +172,11 @@ def pass1_stream_and_save_raw(
             logger.info("[SKIP] %s (ja processado)", lang)
             continue
 
-        logger.info("[PASS1] %s: ~%dM tokens alvo", lang,
+        logger.info("[PASS1] %s via %s: ~%dM tokens alvo", lang, source,
                     (tokens_per_lang // 1_000_000) if tokens_per_lang else 0)
 
-        wiki_config = WIKI_LANGS.get(lang, f"20231101.{lang}")
         try:
-            ds = load_dataset(
-                "wikimedia/wikipedia", wiki_config,
-                split="train", streaming=True,
-            )
+            ds = _load_dataset_streaming(source, lang)
         except Exception as e:
             logger.warning("[WARN] %s nao disponivel: %s", lang, e)
             continue
@@ -161,7 +185,7 @@ def pass1_stream_and_save_raw(
         chars_target = tokens_per_lang * 4 if tokens_per_lang else float("inf")
         char_count = 0
 
-        for example in tqdm(ds, desc=f"Streaming {lang}"):
+        for example in tqdm(ds, desc=f"Streaming {lang} ({source})"):
             text = example.get("text", "")
             if len(text) < 50:
                 continue
@@ -347,6 +371,11 @@ def main():
         help="Tamanho do vocabulario remapeado",
     )
     parser.add_argument(
+        "--source", default="culturax",
+        choices=["culturax", "wikipedia"],
+        help="Fonte de dados: culturax (rapido, requer login HF) ou wikipedia (publico)",
+    )
+    parser.add_argument(
         "--langs", default="en,pt,es,fr,de",
         help="Linguas separadas por virgula",
     )
@@ -386,7 +415,7 @@ def main():
         # Pass 1: stream e salva raw
         freq = pass1_stream_and_save_raw(
             langs, args.max_tokens, output_dir,
-            args.shard_size, args.resume,
+            args.shard_size, args.resume, args.source,
         )
 
         # Pass 2: remap

@@ -194,18 +194,21 @@ pip install -e ".[dev,data,eval]"
 
 ### Preparar Dados
 
-```bash
-# Monolingual (English Wikipedia, GPT-2 tokenizer)
-python scripts/prepare_multilingual_data.py \
-    --output-dir data/en \
-    --max-tokens 10000000 \
-    --vocab-size 50257 \
-    --langs en
+Duas fontes disponiveis: **CulturaX** (6.3T tokens, rapido, recomendado) e **Wikipedia** (publico, bom para testes).
 
-# Multilingual (Wikipedia 5 linguas, o200k_base subset 50K)
+```bash
+# CulturaX multilingual (requer: huggingface-cli login + aceitar termos em huggingface.co/datasets/uonlp/CulturaX)
 python scripts/prepare_multilingual_data.py \
     --output-dir data/multilingual \
     --max-tokens 20000000000 \
+    --vocab-size 50000 \
+    --langs en,pt,es,fr,de
+
+# Wikipedia (publico, sem auth, mais lento)
+python scripts/prepare_multilingual_data.py \
+    --source wikipedia \
+    --output-dir data/multilingual \
+    --max-tokens 50000000 \
     --vocab-size 50000 \
     --langs en,pt,es,fr,de
 
