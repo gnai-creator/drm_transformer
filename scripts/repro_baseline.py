@@ -167,13 +167,105 @@ def main():
     report["kpis"] = _compute_kpis(report)
     _print_kpis(report["kpis"])
 
-    # Salvar relatorio
-    report_path = Path("repro_report.json")
+    # Salvar relatorio no diretorio do baseline
+    save_dir = Path("checkpoints/baseline_1m")
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    report_path = save_dir / "repro_report.json"
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
     logger.info("[SAVED] %s", report_path)
 
+    # Gerar plots
+    _generate_plots(save_dir)
+
     return 0 if steps_ok == steps_total else 1
+
+
+def _generate_plots(save_dir: Path) -> None:
+    """Gera plots de training a partir do training_log.json."""
+    log_path = save_dir / "training_log.json"
+    if not log_path.exists():
+        logger.warning("[PLOTS] training_log.json nao encontrado em %s", save_dir)
+        return
+
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        logger.warning("[PLOTS] matplotlib nao instalado, pulando plots")
+        return
+
+    with open(log_path) as f:
+        log = json.load(f)
+
+    train_entries = [e for e in log if e.get("type") != "eval"]
+    eval_entries = [e for e in log if e.get("type") == "eval"]
+
+    if not train_entries:
+        logger.warning("[PLOTS] Nenhuma entrada de treino no log")
+        return
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle("DRM Transformer Baseline Training Report", fontsize=14, fontweight="bold")
+
+    # 1. Train Loss
+    ax = axes[0, 0]
+    steps = [e["step"] for e in train_entries]
+    losses = [e["loss"] for e in train_entries]
+    ax.plot(steps, losses, linewidth=0.8, color="#2196F3")
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Train Loss")
+    ax.set_title("Train Loss")
+    ax.grid(True, alpha=0.3)
+
+    # 2. Val Loss + PPL
+    ax = axes[0, 1]
+    if eval_entries:
+        eval_steps = [e["step"] for e in eval_entries]
+        val_losses = [e["val_loss"] for e in eval_entries]
+        val_ppls = [e.get("val_ppl", 0) for e in eval_entries]
+        ax.plot(eval_steps, val_losses, "o-", color="#F44336", markersize=3, label="Val Loss")
+        ax2 = ax.twinx()
+        ax2.plot(eval_steps, val_ppls, "s--", color="#FF9800", markersize=3, label="Val PPL")
+        ax2.set_ylabel("Perplexity", color="#FF9800")
+        ax.set_xlabel("Step")
+        ax.set_ylabel("Val Loss", color="#F44336")
+        ax.set_title("Validation Loss & Perplexity")
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8)
+    else:
+        ax.text(0.5, 0.5, "No eval data", ha="center", va="center", transform=ax.transAxes)
+        ax.set_title("Validation Loss & Perplexity")
+    ax.grid(True, alpha=0.3)
+
+    # 3. Learning Rate
+    ax = axes[1, 0]
+    if "lr" in train_entries[0]:
+        lrs = [e["lr"] for e in train_entries]
+        ax.plot(steps, lrs, linewidth=0.8, color="#4CAF50")
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Learning Rate")
+    ax.set_title("Learning Rate Schedule")
+    ax.grid(True, alpha=0.3)
+
+    # 4. Tokens/s
+    ax = axes[1, 1]
+    if "tokens_per_sec" in train_entries[0]:
+        tps = [e["tokens_per_sec"] for e in train_entries]
+        ax.plot(steps, tps, linewidth=0.8, color="#9C27B0")
+    ax.set_xlabel("Step")
+    ax.set_ylabel("Tokens/s")
+    ax.set_title("Throughput")
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plot_path = save_dir / "training_report.png"
+    fig.savefig(plot_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info("[PLOTS] Salvo: %s", plot_path)
 
 
 def _compute_kpis(report: dict) -> dict:
