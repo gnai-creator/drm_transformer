@@ -26,6 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "torch>=2.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +43,10 @@ eval = [
     "ripser",
     "scikit-learn",
     "scipy",
-    "numpy",
+    "matplotlib",
+]
+all = [
+    "drm-transformer[dev,data,eval]",
 ]
 
 [project.urls]
