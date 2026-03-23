@@ -32,18 +32,23 @@ def _compute_calibration(
     confidences, predictions = probs.max(dim=-1)  # [N], [N]
     accuracies = (predictions == targets).float()
 
-    # --- ECE e MCE ---
-    bin_boundaries = torch.linspace(0, 1, n_bins + 1, device=logits.device)
+    # --- ECE e MCE (bins adaptativos / equal-mass) ---
+    conf_sorted, sort_idx = confidences.sort()
+    acc_sorted = accuracies[sort_idx]
+    chunk = max(len(conf_sorted) // n_bins, 1)
+
     ece = torch.tensor(0.0, device=logits.device)
     mce = torch.tensor(0.0, device=logits.device)
+    total = len(conf_sorted)
 
     for i in range(n_bins):
-        mask = (confidences > bin_boundaries[i]) & (confidences <= bin_boundaries[i + 1])
-        if mask.sum() == 0:
-            continue
-        bin_acc = accuracies[mask].mean()
-        bin_conf = confidences[mask].mean()
-        bin_size = mask.float().mean()
+        lo = i * chunk
+        hi = min((i + 1) * chunk, total)
+        if lo >= total:
+            break
+        bin_acc = acc_sorted[lo:hi].mean()
+        bin_conf = conf_sorted[lo:hi].mean()
+        bin_size = (hi - lo) / total
         gap = (bin_acc - bin_conf).abs()
         ece += gap * bin_size
         mce = torch.max(mce, gap)
