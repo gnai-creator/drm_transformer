@@ -114,9 +114,9 @@ class GravityField(nn.Module):
         """
         grav_influence = self._compute_rff_influence(coords, mass)  # [B, T, 1]
         # sqrt(1 + s*g) escala U tal que U U^T cresce linearmente com influencia
-        scale = torch.sqrt(
-            1.0 + self.strength * grav_influence,
-        ).unsqueeze(-1)  # [B, T, 1, 1]
+        # clamp na influencia antes de somar: evita regioes mortas e explosao
+        influence = (self.strength * grav_influence).clamp(min=-0.9, max=5.0)
+        scale = torch.sqrt(1.0 + influence + 1e-6).unsqueeze(-1)  # [B, T, 1, 1]
         return U * scale
 
     def deform_metric_diag(
@@ -138,7 +138,8 @@ class GravityField(nn.Module):
             Tensor [B, T, D] com diagonal da metrica deformada.
         """
         grav_influence = self._compute_rff_influence(coords, mass)  # [B, T, 1]
-        return G_diag * (1.0 + self.strength * grav_influence)
+        influence = (self.strength * grav_influence).clamp(min=-0.9, max=5.0)
+        return G_diag * (1.0 + influence + 1e-6)
 
     def deform_metric(
         self,

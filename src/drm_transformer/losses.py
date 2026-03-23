@@ -10,33 +10,12 @@ def metric_regularization(U: torch.Tensor) -> torch.Tensor:
     Penaliza norma excessiva dos eixos semanticos para manter
     G(x) = I + U U^T proximo da identidade no inicio do treino.
 
-    Aceita U [..., D, r] (low-rank), [..., D] (diagonal legacy),
-    ou [..., D, D] (full matrix legacy).
-
     Args:
-        U: Tensor metrico em qualquer formato.
+        U: [..., D, r] fator low-rank do tensor metrico.
 
     Returns:
-        Loss escalar.
+        Loss escalar: ||U||_F^2 medio.
     """
-    # Backward compat: full matrix -> extrair diagonal
-    if U.dim() >= 2 and U.shape[-1] == U.shape[-2]:
-        G_diag = U.diagonal(dim1=-2, dim2=-1)
-        G_flat = G_diag.reshape(-1, G_diag.shape[-1])
-        scale = ((G_flat - 1.0) ** 2).mean()
-        condition = G_flat.var(dim=-1).mean() / (G_flat.mean(dim=-1).pow(2).mean() + 1e-8)
-        return condition + 0.1 * scale
-
-    # Diagonal legacy: [..., D]
-    if U.dim() >= 1 and (U.dim() < 2 or U.shape[-2] != U.shape[-1]):
-        if U.dim() <= 2:
-            G_flat = U.reshape(-1, U.shape[-1])
-            scale = ((G_flat - 1.0) ** 2).mean()
-            condition = G_flat.var(dim=-1).mean() / (G_flat.mean(dim=-1).pow(2).mean() + 1e-8)
-            return condition + 0.1 * scale
-
-    # Low-rank U: [..., D, r] — penalizar norma total dos eixos
-    # ||U||_F^2 controla quanto G se afasta de I
     U_flat = U.reshape(-1, U.shape[-2], U.shape[-1])
     return U_flat.pow(2).sum(dim=(-2, -1)).mean()
 
@@ -47,34 +26,23 @@ def metric_diversity_loss(
 ) -> torch.Tensor:
     """Penaliza U(x) com variancia entre tokens longe do alvo.
 
-    Aceita U [..., D, r] (low-rank) ou [..., D] (diagonal legacy).
-
     Args:
-        U: Tensor metrico.
+        U: [B, T, D, r] fator low-rank do tensor metrico.
         target_var: Variancia alvo (default 0.001).
 
     Returns:
         Loss escalar.
     """
-    # Backward compat: full matrix -> diagonal
-    if U.dim() >= 2 and U.shape[-1] == U.shape[-2]:
-        U = U.diagonal(dim1=-2, dim2=-1)
-
-    if U.dim() <= 1:
+    if U.dim() < 3:
         return torch.tensor(0.0, device=U.device)
 
-    if U.dim() == 2:
-        # [T, D] ou [T, D*r] — nao tem batch dim
-        return torch.tensor(0.0, device=U.device)
-
-    # Low-rank [B, T, D, r]: flatten D*r e variar sobre tokens
+    # Low-rank [B, T, D, r]: variancia por eixo sobre tokens
     if U.dim() == 4:
-        B, T, D, r = U.shape
-        U_flat = U.reshape(B, T, D * r)
-        var = U_flat.var(dim=1).mean()
+        # var(dim=1) -> [B, D, r], mean(dim=-2) -> [B, r], mean() -> escalar
+        var = U.var(dim=1).mean(dim=-2).mean()
         return (var - target_var).pow(2)
 
-    # Diagonal [B, T, D]: variar sobre tokens
+    # [B, T, D]: variar sobre tokens
     var = U.var(dim=-2).mean()
     return (var - target_var).pow(2)
 
