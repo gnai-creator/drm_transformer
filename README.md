@@ -286,6 +286,11 @@ python empirical/tests/run_all.py
 
 # Com checkpoint treinado (avalia modelo real)
 python empirical/tests/run_all.py --checkpoint checkpoints/1m/final.pt
+
+# Saida em diretorio customizado
+python empirical/tests/run_all.py \
+    --checkpoint checkpoints/multilingual_1m/run_1/final.pt \
+    --output-dir eval_results/empirical_1m
 ```
 
 Saidas:

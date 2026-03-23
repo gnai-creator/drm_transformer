@@ -10,7 +10,7 @@ sys.path.insert(0, str(_test_dir))
 sys.path.insert(0, str(_figures_dir))
 
 import logging
-from utils import load_results, save_results, RESULTS_PATH, logger, set_checkpoint
+from utils import load_results, save_results, RESULTS_PATH, FIGURES_DIR, logger, set_checkpoint, set_output_dir
 
 # Importar modulos de teste
 import test_axes_projection
@@ -32,7 +32,15 @@ def main():
         "--checkpoint", type=str, default=None,
         help="Checkpoint .pt para avaliar (sem = pesos aleatorios)",
     )
+    parser.add_argument(
+        "--output-dir", type=str, default=None,
+        help="Diretorio de saida para results.json e figures/ (default: empirical/)",
+    )
     args = parser.parse_args()
+
+    if args.output_dir:
+        set_output_dir(args.output_dir)
+        logger.info("[OUTPUT] %s", args.output_dir)
 
     if args.checkpoint:
         set_checkpoint(args.checkpoint)
@@ -78,10 +86,11 @@ def main():
     plot_combined.main()
 
     # Resumo final
+    import utils as _u
     results = load_results()
     logger.info("\n" + "=" * 60)
-    logger.info("Resultados salvos em: %s", RESULTS_PATH)
-    logger.info("Figuras salvas em: %s", _figures_dir)
+    logger.info("Resultados salvos em: %s", _u.RESULTS_PATH)
+    logger.info("Figuras salvas em: %s", _u.FIGURES_DIR)
     logger.info("Chaves: %s", list(results.keys()))
     logger.info("=" * 60)
 

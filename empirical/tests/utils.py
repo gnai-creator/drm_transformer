@@ -36,6 +36,14 @@ def set_checkpoint(path: Optional[str]) -> None:
     _CHECKPOINT_PATH = path
 
 
+def set_output_dir(path: str) -> None:
+    """Redireciona RESULTS_PATH e FIGURES_DIR para outro diretorio."""
+    global RESULTS_PATH, FIGURES_DIR
+    out = Path(path)
+    RESULTS_PATH = out / "results.json"
+    FIGURES_DIR = out / "figures"
+
+
 def set_seed(seed: int = 42) -> None:
     """Fixa seeds para reprodutibilidade."""
     torch.manual_seed(seed)
@@ -135,12 +143,15 @@ def get_tokenizer():
 def tokenize_texts(
     texts: List[str],
     max_len: int = 32,
+    vocab_size: int = 50257,
 ) -> torch.Tensor:
     """Tokeniza lista de textos com padding/truncation.
 
     Args:
         texts: Lista de strings.
         max_len: Comprimento maximo.
+        vocab_size: Tamanho do vocabulario do modelo. IDs >= vocab_size
+            sao remapeados com modulo para evitar index out of range.
 
     Returns:
         Tensor [N, max_len] de input_ids.
@@ -149,7 +160,9 @@ def tokenize_texts(
     all_ids = []
     for text in texts:
         ids = enc.encode(text)[:max_len]
-        # Pad com token 0 (eos do GPT-2)
+        # Remapear tokens fora do vocab do modelo
+        ids = [t % vocab_size for t in ids]
+        # Pad com token 0
         ids = ids + [0] * (max_len - len(ids))
         all_ids.append(ids)
     return torch.tensor(all_ids, dtype=torch.long)

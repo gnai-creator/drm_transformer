@@ -23,7 +23,7 @@ def main():
     device = next(model.parameters()).device
 
     texts, labels = get_all_texts_and_labels()
-    input_ids = tokenize_texts(texts).to(device)
+    input_ids = tokenize_texts(texts, vocab_size=config.vocab_size).to(device)
 
     U_all, coords_all, x_pre = get_U_and_coords(model, input_ids, layer_idx=-1)
     _, coords_mean = aggregate_heads_mean(U_all, coords_all)

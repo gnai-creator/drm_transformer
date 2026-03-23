@@ -1,0 +1,134 @@
+{
+  "timestamp": "2026-03-23 08:47:06",
+  "ltsa": {
+    "mean_eff_dim": 3.566666666666667,
+    "eff_dims_dist": [
+      0,
+      4,
+      5,
+      21
+    ],
+    "cell_sizes": [
+      1978,
+      2141,
+      5443,
+      2278,
+      2859,
+      4061,
+      7460,
+      8213,
+      5179,
+      3192,
+      4635,
+      1729,
+      1670,
+      1010,
+      2708,
+      3060,
+      5920,
+      3947,
+      1461,
+      1680,
+      2476,
+      772,
+      2391,
+      2128,
+      2327,
+      3550,
+      1217,
+      3321,
+      9255,
+      1779
+    ]
+  },
+  "coherence": {
+    "mean_angle": 0.7040575088956273,
+    "median_angle": 0.0,
+    "coherent_fraction": 0.9933333333333333
+  },
+  "reeb": {
+    "gamma": {
+      "func_name": "gamma",
+      "skipped": true,
+      "f_std": 0.00047763483598828316
+    },
+    "coord_0": {
+      "func_name": "coord_0",
+      "skipped": true,
+      "f_std": 0.010362177155911922
+    }
+  },
+  "homology": {
+    "skipped": false,
+    "homology": {
+      "H0": {
+        "n_features": 758,
+        "long_bars": 63,
+        "max_persistence": 0.0182475745677948,
+        "mean_persistence": 0.0043030887268395174
+      },
+      "H1": {
+        "n_features": 324,
+        "long_bars": 29,
+        "max_persistence": 0.007028114050626755,
+        "mean_persistence": 0.0009469629813669778
+      },
+      "H2": {
+        "n_features": 57,
+        "long_bars": 4,
+        "max_persistence": 0.0017334464937448502,
+        "mean_persistence": 0.00036632555553264785
+      }
+    },
+    "topology": "genus > 1 (H1=29)",
+    "t2_valid": false
+  },
+  "null_models": {
+    "shuffled": {
+      "type": "shuffled",
+      "mean_coherence_angle": 0.00034681865057733683,
+      "coherent_fraction": 1.0,
+      "dim_entropy": 0.5799151714181009,
+      "mean_eff_dim": 3.7333333333333334
+    },
+    "uniform": {
+      "type": "uniform",
+      "mean_coherence_angle": 1.875420990438671e-07,
+      "coherent_fraction": 1.0,
+      "dim_entropy": 0.8156121939572629,
+      "mean_eff_dim": 3.433333333333333
+    }
+  },
+  "stability": {
+    "mean_ari": 0.6438914641940486,
+    "std_ari": 0.048516316928008216,
+    "n_restarts": 10
+  },
+  "foliation_score": 0.26267886276853486,
+  "coords_correlation": {
+    "coord_0": {
+      "F": 29335.30859375,
+      "p": 0.0
+    },
+    "coord_1": {
+      "F": 90106.9140625,
+      "p": 0.0
+    },
+    "coord_2": {
+      "F": 68516.046875,
+      "p": 0.0
+    },
+    "coord_3": {
+      "F": 64725.94140625,
+      "p": 0.0
+    }
+  },
+  "config": {
+    "n_seeds": 30,
+    "n_restarts": 10,
+    "homology_points": 1500,
+    "use_gamma_distance": false,
+    "n_vectors": 99840,
+    "d_manifold": 4
+  }
+}

@@ -25,7 +25,7 @@ def main():
     device = next(model.parameters()).device
 
     texts, labels = get_all_texts_and_labels()
-    input_ids = tokenize_texts(texts).to(device)
+    input_ids = tokenize_texts(texts, vocab_size=config.vocab_size).to(device)
 
     n_layers = len(model.blocks)
     layer_indices = [0, n_layers // 2, n_layers - 1]

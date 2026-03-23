@@ -20,7 +20,7 @@ def run(seed: int = 42):
     device = next(model.parameters()).device
 
     texts, _ = get_all_texts_and_labels()
-    input_ids = tokenize_texts(texts[:20]).to(device)
+    input_ids = tokenize_texts(texts[:20], vocab_size=config.vocab_size).to(device)
 
     n_layers = len(model.blocks)
     layer_indices = [0, n_layers // 2, n_layers - 1]

@@ -289,34 +289,24 @@
     "seed_42": {
       "mean_heads": {
         "U_real": {
-          "silhouette": -0.08190231770277023,
-          "separation_ratio": 1.0210617780685425,
+          "silhouette": -0.03994372487068176,
+          "separation_ratio": 1.0590959787368774,
           "per_axis": [
             {
-              "axis": 2,
-              "separation": 1.2098753359168768e-06,
-              "pair": "safe-factual"
-            },
-            {
-              "axis": 3,
-              "separation": 1.0154617484658957e-06,
-              "pair": "safe-factual"
+              "axis": 0,
+              "separation": 6.17059413343668e-07,
+              "pair": "unsafe-factual"
             },
             {
               "axis": 1,
-              "separation": 3.7671998143196106e-07,
-              "pair": "safe-factual"
-            },
-            {
-              "axis": 0,
-              "separation": 2.5959161575883627e-07,
-              "pair": "unsafe-hallucination"
+              "separation": 3.6565324990078807e-07,
+              "pair": "unsafe-factual"
             }
           ]
         },
         "U_zero": {
-          "silhouette": -0.08190231770277023,
-          "separation_ratio": 1.0210617780685425,
+          "silhouette": -0.03994372487068176,
+          "separation_ratio": 1.0590959787368774,
           "per_axis": [
             {
               "axis": 0,
@@ -325,44 +315,24 @@
             },
             {
               "axis": 1,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 2,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 3,
               "separation": 0.0,
               "pair": ""
             }
           ]
         },
         "U_random": {
-          "silhouette": -0.08190231770277023,
-          "separation_ratio": 1.0210617780685425,
+          "silhouette": -0.03994372487068176,
+          "separation_ratio": 1.0590959787368774,
           "per_axis": [
             {
               "axis": 0,
-              "separation": 0.5967977046966553,
-              "pair": "unsafe-hallucination"
-            },
-            {
-              "axis": 2,
-              "separation": 0.3849676251411438,
-              "pair": "safe-factual"
+              "separation": 0.7954556941986084,
+              "pair": "safe-unsafe"
             },
             {
               "axis": 1,
-              "separation": 0.35978245735168457,
-              "pair": "factual-hallucination"
-            },
-            {
-              "axis": 3,
-              "separation": 0.3579939305782318,
-              "pair": "unsafe-factual"
+              "separation": 0.1904447376728058,
+              "pair": "unsafe-hallucination"
             }
           ]
         }
@@ -370,28 +340,18 @@
       "best_head": {
         "head_idx": 0,
         "U_real": {
-          "silhouette": -0.06331219524145126,
-          "separation_ratio": 1.0973237752914429,
+          "silhouette": -0.0480983667075634,
+          "separation_ratio": 1.0622031688690186,
           "per_axis": [
             {
-              "axis": 2,
-              "separation": 2.6030174922198057e-06,
-              "pair": "safe-factual"
+              "axis": 0,
+              "separation": 8.841743692755699e-07,
+              "pair": "unsafe-factual"
             },
             {
               "axis": 1,
-              "separation": 1.688109477981925e-06,
+              "separation": 6.516347639262676e-07,
               "pair": "safe-factual"
-            },
-            {
-              "axis": 0,
-              "separation": 7.714988896623254e-07,
-              "pair": "safe-factual"
-            },
-            {
-              "axis": 3,
-              "separation": 6.233458407223225e-07,
-              "pair": "unsafe-factual"
             }
           ]
         }
@@ -400,34 +360,24 @@
     "seed_123": {
       "mean_heads": {
         "U_real": {
-          "silhouette": -0.056086085736751556,
-          "separation_ratio": 1.0829106569290161,
+          "silhouette": -0.06034918874502182,
+          "separation_ratio": 1.0778275728225708,
           "per_axis": [
             {
-              "axis": 1,
-              "separation": 1.3777753338217735e-06,
-              "pair": "safe-hallucination"
-            },
-            {
               "axis": 0,
-              "separation": 9.578852768754587e-07,
+              "separation": 4.7176581574603915e-07,
               "pair": "safe-hallucination"
             },
             {
-              "axis": 3,
-              "separation": 6.948248483240604e-07,
-              "pair": "safe-hallucination"
-            },
-            {
-              "axis": 2,
-              "separation": 4.886314854957163e-07,
-              "pair": "unsafe-factual"
+              "axis": 1,
+              "separation": 3.7255813367664814e-07,
+              "pair": "safe-factual"
             }
           ]
         },
         "U_zero": {
-          "silhouette": -0.056086085736751556,
-          "separation_ratio": 1.0829106569290161,
+          "silhouette": -0.06034918874502182,
+          "separation_ratio": 1.0778275728225708,
           "per_axis": [
             {
               "axis": 0,
@@ -436,43 +386,23 @@
             },
             {
               "axis": 1,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 2,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 3,
               "separation": 0.0,
               "pair": ""
             }
           ]
         },
         "U_random": {
-          "silhouette": -0.056086085736751556,
-          "separation_ratio": 1.0829106569290161,
+          "silhouette": -0.06034918874502182,
+          "separation_ratio": 1.0778275728225708,
           "per_axis": [
             {
               "axis": 1,
-              "separation": 0.9595613479614258,
-              "pair": "safe-unsafe"
-            },
-            {
-              "axis": 2,
-              "separation": 0.9372973442077637,
-              "pair": "safe-factual"
-            },
-            {
-              "axis": 3,
-              "separation": 0.8824501037597656,
-              "pair": "safe-unsafe"
+              "separation": 0.4584044814109802,
+              "pair": "unsafe-factual"
             },
             {
               "axis": 0,
-              "separation": 0.7283666133880615,
+              "separation": 0.29257071018218994,
               "pair": "unsafe-hallucination"
             }
           ]
@@ -481,28 +411,18 @@
       "best_head": {
         "head_idx": 0,
         "U_real": {
-          "silhouette": -0.06176907941699028,
-          "separation_ratio": 1.0636301040649414,
+          "silhouette": -0.050899624824523926,
+          "separation_ratio": 1.080373764038086,
           "per_axis": [
             {
-              "axis": 1,
-              "separation": 1.910608261823654e-06,
-              "pair": "safe-hallucination"
-            },
-            {
               "axis": 0,
-              "separation": 1.8706869013840333e-06,
+              "separation": 8.724819053895772e-07,
               "pair": "safe-hallucination"
             },
             {
-              "axis": 2,
-              "separation": 1.6666817828081548e-06,
-              "pair": "safe-hallucination"
-            },
-            {
-              "axis": 3,
-              "separation": 6.170012056827545e-07,
-              "pair": "unsafe-hallucination"
+              "axis": 1,
+              "separation": 5.622569005936384e-07,
+              "pair": "unsafe-factual"
             }
           ]
         }
@@ -511,34 +431,24 @@
     "seed_7": {
       "mean_heads": {
         "U_real": {
-          "silhouette": -0.04718837887048721,
-          "separation_ratio": 1.0899299383163452,
+          "silhouette": -0.08185772597789764,
+          "separation_ratio": 1.069343090057373,
           "per_axis": [
             {
-              "axis": 1,
-              "separation": 2.3064203560352325e-06,
-              "pair": "unsafe-factual"
-            },
-            {
               "axis": 0,
-              "separation": 1.0558869689702988e-06,
+              "separation": 5.350011633709073e-07,
               "pair": "unsafe-hallucination"
             },
             {
-              "axis": 2,
-              "separation": 4.397006705403328e-07,
+              "axis": 1,
+              "separation": 4.200264811515808e-07,
               "pair": "unsafe-hallucination"
-            },
-            {
-              "axis": 3,
-              "separation": 3.539171302691102e-07,
-              "pair": "safe-factual"
             }
           ]
         },
         "U_zero": {
-          "silhouette": -0.04718837887048721,
-          "separation_ratio": 1.0899299383163452,
+          "silhouette": -0.08185772597789764,
+          "separation_ratio": 1.069343090057373,
           "per_axis": [
             {
               "axis": 0,
@@ -547,44 +457,24 @@
             },
             {
               "axis": 1,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 2,
-              "separation": 0.0,
-              "pair": ""
-            },
-            {
-              "axis": 3,
               "separation": 0.0,
               "pair": ""
             }
           ]
         },
         "U_random": {
-          "silhouette": -0.04718837887048721,
-          "separation_ratio": 1.0899299383163452,
+          "silhouette": -0.08185772597789764,
+          "separation_ratio": 1.069343090057373,
           "per_axis": [
             {
-              "axis": 2,
-              "separation": 0.902525782585144,
+              "axis": 0,
+              "separation": 0.3248215615749359,
               "pair": "safe-unsafe"
             },
             {
               "axis": 1,
-              "separation": 0.689079999923706,
-              "pair": "factual-hallucination"
-            },
-            {
-              "axis": 0,
-              "separation": 0.43935203552246094,
-              "pair": "unsafe-hallucination"
-            },
-            {
-              "axis": 3,
-              "separation": 0.3514534831047058,
-              "pair": "factual-hallucination"
+              "separation": 0.2855435907840729,
+              "pair": "safe-unsafe"
             }
           ]
         }
@@ -592,28 +482,18 @@
       "best_head": {
         "head_idx": 0,
         "U_real": {
-          "silhouette": -0.045309990644454956,
-          "separation_ratio": 1.0765209197998047,
+          "silhouette": -0.06812279671430588,
+          "separation_ratio": 1.098647117614746,
           "per_axis": [
             {
-              "axis": 2,
-              "separation": 3.2818643376231194e-06,
-              "pair": "safe-factual"
+              "axis": 0,
+              "separation": 8.212009561248124e-07,
+              "pair": "safe-hallucination"
             },
             {
               "axis": 1,
-              "separation": 2.6840134523808956e-06,
-              "pair": "unsafe-factual"
-            },
-            {
-              "axis": 0,
-              "separation": 1.180451363325119e-06,
-              "pair": "unsafe-factual"
-            },
-            {
-              "axis": 3,
-              "separation": 7.276394171640277e-07,
-              "pair": "unsafe-factual"
+              "separation": 4.59185685031116e-07,
+              "pair": "safe-factual"
             }
           ]
         }
@@ -623,43 +503,43 @@
   "geometry_correlation": {
     "seed_42": {
       "geodesic_semantic": {
-        "corr": 0.44890737533569336,
+        "corr": 0.49323081970214844,
         "p_value": 0.0
       },
       "euclidean_semantic": {
-        "corr": 0.44890743494033813,
+        "corr": 0.49323081970214844,
         "p_value": 0.0
       },
       "random_semantic": {
-        "corr": 0.35931509733200073,
+        "corr": 0.3579519987106323,
         "p_value": 0.0
       }
     },
     "seed_123": {
       "geodesic_semantic": {
-        "corr": 0.5188499093055725,
+        "corr": 0.32557979226112366,
         "p_value": 0.0
       },
       "euclidean_semantic": {
-        "corr": 0.5188499093055725,
+        "corr": 0.32557979226112366,
         "p_value": 0.0
       },
       "random_semantic": {
-        "corr": 0.3957453966140747,
-        "p_value": 0.0
+        "corr": 0.21265433728694916,
+        "p_value": 1.2236478340552494e-33
       }
     },
     "seed_7": {
       "geodesic_semantic": {
-        "corr": 0.5387574434280396,
+        "corr": 0.3904212415218353,
         "p_value": 0.0
       },
       "euclidean_semantic": {
-        "corr": 0.5387573838233948,
+        "corr": 0.3904212415218353,
         "p_value": 0.0
       },
       "random_semantic": {
-        "corr": 0.35913729667663574,
+        "corr": 0.2518552243709564,
         "p_value": 0.0
       }
     }
