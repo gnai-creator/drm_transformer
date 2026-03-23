@@ -158,7 +158,7 @@ def main():
                     report["baseline"].get("best_val_ppl", -1))
 
     # Ablation results
-    ablation_results = Path("results_ablations.json")
+    ablation_results = save_dir / "results_ablations.json"
     if ablation_results.exists():
         with open(ablation_results) as f:
             report["ablations"] = json.load(f)

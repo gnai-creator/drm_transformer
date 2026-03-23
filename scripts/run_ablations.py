@@ -26,7 +26,8 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 ABLATION_DIR = Path("configs/ablations")
-RESULTS_FILE = Path("results_ablations.md")
+RESULTS_DIR = Path("checkpoints/baseline_1m")
+RESULTS_FILE = RESULTS_DIR / "results_ablations.md"
 
 ABLATIONS = {
     "full": "Modelo completo (gravity + gamma + variable_dim)",
