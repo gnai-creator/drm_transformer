@@ -36,3 +36,4 @@ variable_dim: true
 lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.05
 metric_diversity_warmup_steps: 1000
+save_dir: checkpoints/15m

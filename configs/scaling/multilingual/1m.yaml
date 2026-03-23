@@ -35,3 +35,4 @@ variable_dim: true
 lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.05
 metric_diversity_warmup_steps: 500
+save_dir: checkpoints/multilingual_1m
