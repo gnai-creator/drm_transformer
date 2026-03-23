@@ -62,9 +62,8 @@ class MetricNet(nn.Module):
         )
         L[..., self.tril_row, self.tril_col] = raw
 
-        L[..., self.diag_idx, self.diag_idx] = (
-            F.softplus(L[..., self.diag_idx, self.diag_idx]) + 1e-3
-        )
+        diag_vals = F.softplus(L[..., self.diag_idx, self.diag_idx]) + 1e-3
+        L[..., self.diag_idx, self.diag_idx] = diag_vals.to(L.dtype)
 
         G = torch.matmul(L, L.transpose(-1, -2))
 
