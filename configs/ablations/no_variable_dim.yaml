@@ -1,0 +1,62 @@
+# Ablation: sem dimensionalidade variavel (DimensionalGate)
+# Diferenca do full: variable_dim=false
+
+# --- Modelo ---
+vocab_size: 50000
+d_model: 64
+n_heads: 2
+n_layers: 4
+d_ff: 256
+max_seq_len: 256
+dropout: 0.1
+bias: false
+
+# --- Dados ---
+data_dir: data/baseline/train
+eval_data_dir: data/baseline/val
+
+# --- Treino ---
+batch_size: 16
+learning_rate: 0.001
+warmup_steps: 100
+total_tokens: 10_000_000
+mixed_precision: none
+gradient_accumulation_steps: 1
+
+# --- Avaliacao ---
+eval_interval: 200
+early_stop_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 4
+metric_hidden: 16
+metric_rank: 4
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 2.0
+gamma_alpha: 0.0
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.1
+gravity_n_rff: 64
+n_anchors: 6
+
+# --- Dimensionalidade variavel ---
+variable_dim: false
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.01
+lambda_ortho: 0.01
+metric_diversity_warmup_steps: 500
+target_metric_var: 0.001
+
+# --- Checkpointing ---
+save_dir: checkpoints/ablations/no_variable_dim
+save_interval: 200
+save_total_limit: 3
+log_interval: 10
+temperature_min: 0.5

@@ -103,6 +103,33 @@ torchrun --nproc_per_node=4 scripts/train_distributed.py \
     --seed 42
 ```
 
+## 5. Ablacoes e Avaliacao
+
+```bash
+# Rodar todas as ablacoes (full, no_gravity, no_gamma, no_variable_dim)
+python scripts/run_ablations.py --seed 42 --deterministic
+
+# Avaliar perplexity de todas as ablacoes
+python scripts/eval_standard.py --all-ablations
+
+# Ou avaliar um checkpoint especifico
+python scripts/eval_standard.py \
+    --checkpoint checkpoints/baseline_1m/best.pt \
+    --eval-data data/baseline/val
+
+# Apenas consolidar resultados de ablacoes ja rodadas
+python scripts/run_ablations.py --collect-only
+```
+
+Resultado: `results_ablations.md` com tabela comparativa + `results_ablations.json`.
+
+| Variante | Gravity | Gamma | VarDim | Descricao |
+|----------|---------|-------|--------|-----------|
+| full | Y | Y | Y | Modelo completo |
+| no_gravity | N | Y | Y | Sem campo gravitacional |
+| no_gamma | Y | N | Y | Sem gamma-scaling (Lorentz) |
+| no_variable_dim | Y | Y | N | Sem DimensionalGate |
+
 ### O que `--seed 42` faz
 
 Fixa todas as fontes de aleatoriedade:
@@ -122,7 +149,7 @@ Ativa flags de determinismo no PyTorch:
 
 **Nota:** modo deterministico pode reduzir performance em ~5-10%.
 
-## 5. Run Manifest
+## 6. Run Manifest
 
 A cada treino, um `run_manifest.json` e salvo automaticamente no diretorio
 de checkpoints com:
@@ -156,7 +183,7 @@ de checkpoints com:
 }
 ```
 
-## 6. Criterio de Sucesso
+## 7. Criterio de Sucesso
 
 Duas execucoes com o mesmo comando, seed e hardware devem produzir:
 - **Loss final**: dentro de 1% de tolerancia
@@ -194,7 +221,7 @@ print('PASS' if all(
 "
 ```
 
-## 7. Limitacoes Conhecidas
+## 8. Limitacoes Conhecidas
 
 - **Multi-GPU**: NCCL pode introduzir nao-determinismo em reducoes.
   Para determinismo total, use single GPU.

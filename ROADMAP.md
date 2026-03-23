@@ -30,11 +30,14 @@ Plano de desenvolvimento do DRM Transformer.
 ## v0.3.0 (Em Andamento)
 
 - [ ] Pre-treinamento completo 20B tokens multilingual (en/pt/es/fr/de) via CulturaX
-- [ ] Benchmarks padrao (HellaSwag, ARC, MMLU) pos-treinamento
+- [x] Infraestrutura de reprodutibilidade (seed, determinismo, run manifest)
+- [x] Baseline canonico small_1m com dataset fixo e early stop
+- [x] Matriz de ablacoes (full, no_gravity, no_gamma, no_variable_dim)
+- [x] Script de avaliacao padronizada (perplexity, futuro: HellaSwag/ARC)
+- [ ] Rodar ablacoes e gerar results_ablations.md
+- [ ] Benchmarks padrao (HellaSwag, ARC, MMLU) pos-treinamento 350M+
 - [ ] Analise de curvatura: G(x) constante vs variavel (H0 vs H1)
-- [ ] Ablation studies: gravidade, DimensionalGate, gamma-scaling
 - [ ] Comparativo formal: DRM Transformer vs GPT-2 / LLaMA
-  com foco em qualidade de representacao e perplexidade
 - [ ] Export ONNX para inferencia otimizada
 
 ## v0.4.0 (Planejado)
