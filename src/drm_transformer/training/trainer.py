@@ -502,6 +502,18 @@ class DRMTrainer:
         torch.save(state, path)
         logger.info("[CHECKPOINT] Salvo: %s", path)
 
+        # Manter apenas os N checkpoints de step mais recentes
+        if tag is None:
+            limit = self.config.get("save_total_limit", 5)
+            step_files = sorted(
+                self.save_dir.glob("step_*.pt"),
+                key=lambda p: p.stat().st_mtime,
+            )
+            while len(step_files) > limit:
+                old = step_files.pop(0)
+                old.unlink()
+                logger.info("[CHECKPOINT] Removido: %s", old.name)
+
     def load_checkpoint(self, path: str) -> None:
         """Carrega checkpoint.
 

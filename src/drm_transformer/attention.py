@@ -91,7 +91,10 @@ class DRMAttention(nn.Module):
         self.q_to_manifold = nn.Linear(self.d_head, config.d_manifold, bias=False)
         self.k_to_manifold = nn.Linear(self.d_head, config.d_manifold, bias=False)
 
-        self.temperature = nn.Parameter(torch.tensor(1.0))
+        self.temperature = nn.Parameter(
+            torch.tensor(getattr(config, "temperature_init", 1.0))
+        )
+        self.temperature_min = getattr(config, "temperature_min", 0.5)
 
         self.rope = RotaryEmbedding(self.d_head, config.max_seq_len)
 
@@ -160,7 +163,7 @@ class DRMAttention(nn.Module):
             gamma_sq = (gamma ** 2).unsqueeze(1)
             dist_sq = dist_sq * gamma_sq
 
-        temp = self.temperature.clamp(min=0.1)
+        temp = self.temperature.clamp(min=self.temperature_min)
         attn = -dist_sq / temp
 
         causal_mask = torch.triu(

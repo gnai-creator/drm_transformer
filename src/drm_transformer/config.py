@@ -42,6 +42,9 @@ class DRMTransformerConfig:
     gamma_enabled: bool = True
     gamma_c: float = 4.0
 
+    temperature_init: float = 1.0
+    temperature_min: float = 0.5
+
     gravity_enabled: bool = True
     gravity_strength: float = 0.1
 
