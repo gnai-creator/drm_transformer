@@ -205,7 +205,7 @@ python scripts/prepare_multilingual_data.py \
 # Multilingual (Wikipedia 5 linguas, o200k_base subset 50K)
 python scripts/prepare_multilingual_data.py \
     --output-dir data/multilingual \
-    --max-tokens 50000000 \
+    --max-tokens 20000000000 \
     --vocab-size 50000 \
     --langs en,pt,es,fr,de
 ```
