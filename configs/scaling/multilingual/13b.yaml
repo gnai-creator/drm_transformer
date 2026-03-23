@@ -1,0 +1,42 @@
+# ~13B params - Llama-2-13B equivalent [multilingual o200k_base 50K]
+vocab_size: 50000
+d_model: 5120
+n_heads: 40
+n_layers: 40
+d_ff: 13824
+max_seq_len: 4096
+dropout: 0.0
+bias: false
+batch_size: 2
+learning_rate: 0.0003
+warmup_steps: 2000
+total_tokens: 1_000_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 64
+gradient_checkpointing: true
+distributed: true
+fsdp: true
+fsdp_sharding: full
+eval_interval: 500
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 24
+metric_hidden: 96
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 4.90
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.02
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.0003
+lambda_metric_diversity: 0.02
+metric_diversity_warmup_steps: 20000

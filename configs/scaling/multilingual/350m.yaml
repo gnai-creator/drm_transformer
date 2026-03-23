@@ -1,0 +1,39 @@
+# ~350M params - GPT-2 Medium equivalent [multilingual o200k_base 50K]
+vocab_size: 50000
+d_model: 1024
+n_heads: 16
+n_layers: 24
+d_ff: 4096
+max_seq_len: 1024
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.0003
+warmup_steps: 2000
+total_tokens: 7_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 8
+gradient_checkpointing: false
+eval_interval: 500
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 16
+metric_hidden: 64
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 4.0
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.05
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.05
+metric_diversity_warmup_steps: 5000

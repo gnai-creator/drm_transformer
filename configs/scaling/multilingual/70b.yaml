@@ -1,0 +1,43 @@
+# ~70B params - Llama-2-70B equivalent [multilingual o200k_base 50K]
+vocab_size: 50000
+d_model: 8192
+n_heads: 64
+n_layers: 80
+d_ff: 28672
+max_seq_len: 4096
+dropout: 0.0
+bias: false
+batch_size: 1
+learning_rate: 0.00015
+warmup_steps: 2000
+total_tokens: 2_000_000_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 128
+gradient_checkpointing: true
+distributed: true
+fsdp: true
+fsdp_sharding: full
+compile_model: true
+eval_interval: 500
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 28
+metric_hidden: 112
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 5.29
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.01
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.0002
+lambda_metric_diversity: 0.01
+metric_diversity_warmup_steps: 30000

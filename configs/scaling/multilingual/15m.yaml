@@ -1,0 +1,38 @@
+# ~15M params - Validacao rapida em GPU consumer [multilingual o200k_base 50K]
+vocab_size: 50000
+d_model: 256
+n_heads: 4
+n_layers: 6
+d_ff: 1024
+max_seq_len: 512
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.0006
+warmup_steps: 500
+total_tokens: 500_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 2
+eval_interval: 500
+early_stopping_patience: 5
+
+# --- Manifold DRM ---
+d_manifold: 8
+metric_hidden: 32
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 2.83
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.1
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.05
+metric_diversity_warmup_steps: 1000
