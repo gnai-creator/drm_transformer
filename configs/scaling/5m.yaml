@@ -1,0 +1,46 @@
+# ~5M params - Validacao rapida 
+vocab_size: 50257
+d_model: 96
+n_heads: 3
+n_layers: 6
+d_ff: 384
+max_seq_len: 512
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.0008
+warmup_steps: 300
+total_tokens: 100_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 2
+eval_interval: 500
+early_stopping_patience: 5
+
+# --- Manifold DRM ---
+d_manifold: 4
+metric_hidden: 16
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 2.45
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.1
+gravity_n_rff: 64
+n_anchors: 6
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.03
+metric_diversity_warmup_steps: 1000
+save_dir: checkpoints/5m
+save_interval: 500
+log_interval: 50
+target_metric_var: 0.001
+save_total_limit: 5
+temperature_min: 0.5
