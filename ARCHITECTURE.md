@@ -23,51 +23,51 @@ Baseado em tres papers de Felipe Maya Muniz:
 ```
 src/drm_transformer/
 |
-+-- config.py                    # DRMTransformerConfig (parametros do modelo)
++-- config.py                       # DRMTransformerConfig (dataclass, todos os parametros)
++-- model.py                        # DRMTransformerModel (forward principal)
++-- layers.py                       # DRMBlock (Attention + FFN + LayerNorm + Residual)
++-- attention.py                    # GeodesicAttention (distancia sob G(x), multi-head)
++-- metric_net.py                   # MetricNet: G(x) diagonal + low-rank semantic axes
++-- manifold.py                     # Operacoes no manifold (gamma-scaling, coordenadas)
++-- gravity.py                      # GravityField: massa deforma G(x) via RFF kernel
++-- dimensional_gate.py             # DimensionalGate: dimD(p) variavel por token
++-- losses.py                       # Loss composta: CE + metric_reg + metric_diversity
++-- __init__.py
 |
-+-- model/                       # Nucleo do modelo
-|   +-- model.py                 # DRMTransformerModel (forward principal)
-|   +-- embeddings.py            # TokenEmbedding + positional encoding
-|   +-- output.py                # ModelOutput dataclass
++-- training/
+|   +-- trainer.py                  # Trainer (single/multi-GPU, mixed precision)
+|   +-- distributed.py              # DDP + FSDP setup, DistributedSampler
+|   +-- data.py                     # ShardedDataset (.npy/.bin), DataLoader utilities
+|   +-- __init__.py
 |
-+-- attention/                   # DRM Attention
-|   +-- geodesic_attention.py    # GeodesicAttention (distancia sob G(x))
-|   +-- gamma_scaling.py         # Lorentz gamma-factor adaptive scaling
-|
-+-- metric_net/                  # Tensor metrico aprendido
-|   +-- metric_net.py            # MetricNet: G(x) via MLP + Cholesky (SPD)
-|   +-- cholesky_param.py        # Parametrizacao Cholesky para G = LL^T
-|
-+-- manifold/                    # Operacoes no manifold
-|   +-- geodesic_distance.py     # Distancia geodesica sob G(x)
-|   +-- christoffel.py           # Simbolos de Christoffel (conexao)
-|   +-- curvature.py             # Curvatura de Ricci / escalar
-|
-+-- gravity/                     # Campo gravitacional
-|   +-- gravity_field.py         # GravityField: massa dos tokens deforma G(x)
-|   +-- token_mass.py            # Aprendizado de massa por token
-|
-+-- dimensional_gate/            # Dimensionalidade variavel
-|   +-- dimensional_gate.py      # DimensionalGate: dimD(p) por token
-|   +-- soft_mask.py             # Mascara suave para dimensoes ativas
-|
-+-- layers/                      # Blocos do transformer
-|   +-- drm_block.py             # DRMBlock (DRMAttention + FFN + LayerNorm)
-|   +-- feed_forward.py          # FeedForward (GELU ou SwiGLU)
-|   +-- lm_head.py               # Language model head
-|
-+-- losses/                      # Funcoes de perda
-|   +-- composite_loss.py        # Agregador: CE + metric_reg + metric_diversity
-|   +-- metric_regularization.py # Penaliza condition number de G(x)
-|   +-- metric_diversity.py      # Penaliza G(x) constante (flat space)
-|
-+-- training/                    # Pipeline de treinamento
-|   +-- trainer.py               # Trainer (single-GPU / DDP)
-|   +-- data.py                  # DataLoader utilities
-|   +-- scheduler.py             # WarmupCosine scheduler
-|
-+-- inference/                   # Geracao
-    +-- generator.py             # Generator (top-k, top-p sampling)
++-- evaluation/
+    +-- foliation.py                # DRMFoliationEvaluator (Voronoi, LTSA, Homology, Reeb, ARI)
+    +-- __init__.py
+
+scripts/
++-- train_distributed.py            # Lancamento de treino (single/multi GPU via torchrun)
++-- prepare_multilingual_data.py    # Download + tokenize + remap (CulturaX/Wikipedia, streaming)
++-- extract_drm_vectors.py          # Extrai coords, G_diag, gamma, mass de checkpoints
++-- voronoi_foliation_drm.py        # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
+
+empirical/
++-- tests/
+|   +-- run_all.py                  # Runner: executa 5 testes + gera figuras
+|   +-- test_axis_statistics.py     # Estatisticas dos eixos do manifold
+|   +-- test_axes_projection.py     # Projecao dos eixos semanticos
+|   +-- test_calibration.py         # ECE, MCE, Brier score, perplexidade
+|   +-- test_geometry_correlation.py # Correlacao entre geometria e semantica
+|   +-- test_semantic_separation.py # Separacao semantica no espaco aprendido
+|   +-- utils.py                    # Utilitarios compartilhados
++-- figures/
+    +-- plot_axis_heatmap.py        # Heatmap dos eixos do tensor metrico
+    +-- plot_axis_separation.py     # Separacao entre eixos semanticos
+    +-- plot_calibration.py         # Reliability diagram + confidence histogram
+    +-- plot_combined.py            # Dashboard combinado (ECE, MCE, Brier, PPL)
+    +-- plot_pca.py                 # PCA dos embeddings no manifold
+    +-- plot_tsne.py                # t-SNE dos embeddings
+
+configs/scaling/multilingual/       # 12 configs de escala (1M a 640B params)
 ```
 
 ## Fluxo de Forward Pass
@@ -139,7 +139,7 @@ plano. Todos os tokens vivem na mesma geometria.
 G_x = MetricNet(hidden)                    # Tensor metrico G(x) [B,T,d,d]
 G_x = G_x + gravity_deformation(mass, G)   # Gravidade deforma a metrica
 d_ij = geodesic_distance(Q_i, K_j, G_x)    # Distancia sob G(x)
-gamma_ij = lorentz_factor(d_ij)             # Fator relativístico
+gamma_ij = lorentz_factor(d_ij)             # Fator relativistico
 attn_weights = softmax(-d_ij * gamma_ij)    # Proximidade geodesica
 output = attn_weights @ V
 ```
@@ -149,41 +149,42 @@ atencao. A geometria e aprendida end-to-end via MetricNet. A gravidade
 dos tokens pesados (alta massa) curva o espaco ao redor, atraindo tokens
 vizinhos. O fator gamma escala adaptativamente a resolucao.
 
-## MetricNet: G(x) via MLP + Cholesky
+## MetricNet: G(x) Diagonal + Low-Rank Semantic Axes
 
-O tensor metrico G(x) deve ser Simetrico Positivo Definido (SPD) para
-definir uma geometria Riemanniana valida. A parametrizacao e:
+O tensor metrico G(x) e parametrizado como diagonal + low-rank para
+eficiencia e expressividade:
 
 ```
 hidden [B,T,d_model]
     |
-    MLP (tanh activation)   # C1 suave para Christoffel
+    MLP
     |
     v
-L [B,T,d,d]  (triangular inferior)
+diag [B,T,d_manifold]          # Componente diagonal (softplus + epsilon)
+axes [B,T,metric_rank,d_manifold]  # Eixos semanticos low-rank
     |
-    G = L @ L^T + epsilon * I   # SPD garantido
+    G(x) = diag(diag) + axes^T @ axes   # SPD garantido
 ```
 
 Propriedades:
-- **Tanh activation**: G(x) deve ser C1 para simbolos de Christoffel
-- **softplus + epsilon no diagonal**: estabilidade numerica
-- **Zero init na ultima camada**: G(x) ~ I na inicializacao
-- **LR separado (10x)**: sinal de gradiente fraco relativo ao modelo principal
+- **Diagonal base**: captura escala por dimensao
+- **Low-rank axes**: captura correlacoes semanticas (metric_rank << d_manifold)
+- **SPD garantido**: diag > 0 + outer product sempre positivo semi-definido
+- **d_manifold**: dimensao do manifold (tipicamente 16), independente de d_model
 
-## GravityField: Massa dos Tokens Deforma a Metrica
+## GravityField: Massa dos Tokens via RFF Kernel
 
-Cada token possui uma massa aprendida m_i. Tokens com alta massa deformam
-o tensor metrico na sua vizinhanca, analogamente a gravidade na Relatividade
-Geral:
+Cada token possui uma massa aprendida. O campo gravitacional usa Random
+Fourier Features (RFF) para eficiencia:
 
 ```
-G_eff(x) = G(x) + sum_i  m_i * K(x, x_i)
+G_eff(x) = G(x) + gravity_strength * sum_i  m_i * RFF_kernel(x, x_i)
 ```
 
-Onde K(x, x_i) e um kernel de influencia (e.g., Gaussiano) que decai com
-a distancia. Tokens "importantes" (alta massa) curvam o espaco, atraindo
-a atencao de tokens vizinhos.
+Parametros:
+- `gravity_strength`: forca do campo (default 0.1)
+- `gravity_n_rff`: numero de features aleatorias (default 64)
+- `n_anchors`: pontos de ancora para o campo (default 6)
 
 ## DimensionalGate: Dimensionalidade Variavel dimD(p)
 
@@ -215,40 +216,94 @@ L_total = lambda_ce * CE(logits, targets)
 | metric_reg | Penaliza condition number alto de G(x) -- estabilidade |
 | metric_div | Penaliza G(x) constante -- incentiva curvatura aprendida |
 
-### metric_regularization
+## Treinamento Distribuido
 
-Baseada na norma Frobenius da diferenca entre G(x) e a identidade,
-ponderada pelo condition number. Impede que G(x) degenere (eigenvalues
-muito grandes ou pequenos).
+Suporte completo a treino multi-GPU via `training/distributed.py`:
 
-### metric_diversity
+- **DDP** (Distributed Data Parallel): gradientes sincronizados entre GPUs
+- **FSDP** (Fully Sharded Data Parallel): para modelos grandes (>1B params)
+- **Mixed precision** (fp16/bf16): reduz memoria e acelera compute
+- **Gradient checkpointing**: troca compute por memoria em modelos profundos
+- **DistributedSampler**: particiona dados entre workers
 
-Penaliza variancia baixa de G(x) ao longo da sequencia. Se G(x) e
-identico para todos os tokens, a geometria e efetivamente plana e o
-DRM nao agrega valor. Esta loss incentiva variacao estrutural.
+Lancamento via torchrun:
+```bash
+torchrun --nproc_per_node=4 scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml
+```
+
+## Pipeline de Dados
+
+O `prepare_multilingual_data.py` opera em 2 passes com memoria constante:
+
+1. **Pass 1**: Stream textos (CulturaX ou Wikipedia) -> tokeniza (o200k_base) -> conta freq -> salva shards raw (uint32)
+2. **Pass 2**: Constroi vocab mapping top-K -> remapeia shards raw -> salva shards finais (uint16)
+
+Features:
+- Checkpoint por lingua (resume com `--resume`)
+- CulturaX (default): 6.3T tokens, 167 linguas, download rapido via parquet
+- Wikipedia: publico, sem autenticacao
+- Tokenizacao: tiktoken o200k_base com remapeamento para vocab compacto (50K)
+
+## Avaliacao Empirica
+
+Suite de 5 testes diagnosticos + 6 visualizacoes:
+
+| Teste | O que mede |
+|-------|-----------|
+| axis_statistics | Estatisticas dos eixos semanticos do manifold |
+| axes_projection | Qualidade da projecao dos eixos low-rank |
+| calibration | ECE, MCE, Brier score, perplexidade |
+| geometry_correlation | Correlacao entre geometria aprendida e semantica |
+| semantic_separation | Separacao de clusters no espaco do manifold |
+
+Foliation evaluator (pipeline de 9 fases): Voronoi tessellation, LTSA,
+Homologia persistente, grafo de Reeb, ARI (Adjusted Rand Index).
 
 ## Parametros de Configuracao
 
 | Parametro | Tipo | Default | Descricao |
 |-----------|------|---------|-----------|
-| d_model | int | 768 | Dimensao do modelo |
-| n_heads | int | 12 | Numero de heads de atencao |
-| n_layers | int | 12 | Numero de blocos DRM |
-| d_ff | int | 3072 | Dimensao do feed-forward |
 | vocab_size | int | 50257 | Tamanho do vocabulario |
 | max_seq_len | int | 1024 | Comprimento maximo de sequencia |
+| d_model | int | 384 | Dimensao do modelo |
+| n_layers | int | 6 | Numero de blocos DRM |
+| n_heads | int | 6 | Numero de heads de atencao |
+| d_ff | int | 1536 | Dimensao do feed-forward |
 | dropout | float | 0.1 | Taxa de dropout |
-| metric_net_hidden | int | 64 | Dimensao oculta do MetricNet |
-| metric_net_activation | str | "tanh" | Ativacao do MetricNet (C1) |
-| gravity_kernel | str | "gaussian" | Kernel do campo gravitacional |
-| gravity_sigma | float | 1.0 | Largura do kernel gravitacional |
-| dim_gate_threshold | float | 0.5 | Threshold do DimensionalGate |
-| lambda_ce | float | 1.0 | Peso da loss CE |
-| lambda_metric_reg | float | 0.01 | Peso da regularizacao metrica |
-| lambda_metric_div | float | 0.001 | Peso da diversidade metrica |
-| gamma_scaling | bool | True | Habilita Lorentz gamma-scaling |
-| use_gravity | bool | True | Habilita campo gravitacional |
-| use_dim_gate | bool | True | Habilita DimensionalGate |
+| bias | bool | False | Bias nas camadas lineares |
+| d_manifold | int | 16 | Dimensao do manifold epistemico |
+| metric_hidden | int | 64 | Dimensao oculta do MetricNet |
+| metric_rank | int | 4 | Rank dos eixos semanticos low-rank |
+| n_quad | int | 0 | Pontos de quadratura (0=Mahalanobis local) |
+| n_anchors | int | 6 | Pontos de ancora do campo gravitacional |
+| gamma_enabled | bool | True | Habilita Lorentz gamma-scaling |
+| gamma_c | float | 4.0 | Velocidade limite c para gamma |
+| gamma_alpha | float | 0.0 | Alpha do gamma-scaling |
+| temperature_init | float | 1.0 | Temperatura inicial da atencao |
+| temperature_min | float | 0.5 | Temperatura minima |
+| gravity_enabled | bool | True | Habilita campo gravitacional |
+| gravity_strength | float | 0.1 | Forca da gravidade |
+| gravity_n_rff | int | 64 | Numero de Random Fourier Features |
+| variable_dim | bool | True | Habilita DimensionalGate |
+
+## Scaling Configs
+
+12 configuracoes multilingual de 1M a 640B parametros em `configs/scaling/multilingual/`:
+
+| Config | Params | d_model | n_layers | n_heads |
+|--------|--------|---------|----------|---------|
+| 1m | ~1M | 64 | 4 | 2 |
+| 5m | ~5M | 96 | 6 | 3 |
+| 10m | ~10M | 160 | 6 | 4 |
+| 15m | ~15M | 256 | 6 | 4 |
+| 50m | ~50M | 512 | 8 | 8 |
+| 125m | ~125M | 768 | 12 | 12 |
+| 350m | ~350M | 1024 | 24 | 16 |
+| 1.3b | ~1.3B | 2048 | 24 | 16 |
+| 13b | ~13B | 5120 | 40 | 40 |
+| 70b | ~70B | 8192 | 80 | 64 |
+| 162b | ~162B | 12288 | 96 | 96 |
+| 640b | ~640B | 16384 | 126 | 128 |
 
 ---
 
