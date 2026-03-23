@@ -41,7 +41,7 @@ Plano de desenvolvimento do DRM Transformer.
 - [x] Preencher MODEL_CARD.md com numeros reais (baseline 1M)
 - [x] Training report plot (loss, PPL, LR, throughput)
 - [x] Fix: remap O(1) via lookup array (42s/shard -> ~0.1s/shard)
-- [ ] Tag de release v0.3.0-baseline com artefatos
+- [x] Tag de release v0.3.0-baseline com artefatos
 - [ ] Benchmarks padrao (HellaSwag, ARC, MMLU) pos-treinamento 350M+
 - [ ] Analise de curvatura: G(x) constante vs variavel (H0 vs H1)
 - [ ] Comparativo formal: DRM Transformer vs GPT-2 / LLaMA
