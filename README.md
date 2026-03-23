@@ -208,6 +208,25 @@ python scripts/prepare_multilingual_data.py \
     --max-tokens 20000000000 \
     --vocab-size 50000 \
     --langs en,pt,es,fr,de
+
+# Uma lingua por vez (com checkpoint/resume)
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual \
+    --max-tokens 4000000000 \
+    --vocab-size 50000 \
+    --langs en
+
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual \
+    --max-tokens 4000000000 \
+    --vocab-size 50000 \
+    --langs pt --resume
+
+# Finalizar (remapeia shards raw -> uint16)
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual \
+    --vocab-size 50000 \
+    --finalize --clean-raw
 ```
 
 ### Treinamento
