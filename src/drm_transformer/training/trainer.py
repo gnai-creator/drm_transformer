@@ -188,13 +188,15 @@ class DRMTrainer:
         # Coordenadas de amostra para avaliar G(x)
         d = metric_net.dim
         coords = torch.rand(1, 16, d, device=self.device)
-        G = metric_net(coords)  # [1, 16, D, D]
+        U = metric_net(coords)  # [1, 16, D, r]
 
-        # G(x) estatisticas
-        metrics["metric_G_var"] = G.var(dim=(0, 1)).mean().item()
-        G_diag = G.diagonal(dim1=-2, dim2=-1)
-        metrics["metric_G_diag_mean"] = G_diag.mean().item()
-        metrics["metric_G_frob"] = G.pow(2).sum(dim=(-2, -1)).sqrt().mean().item()
+        # U(x) estatisticas (low-rank)
+        metrics["metric_U_norm_mean"] = U.pow(2).sum(dim=-2).sqrt().mean().item()
+        metrics["metric_U_rank"] = float(metric_net.rank)
+        # Eixos: norma media por eixo semantico
+        axis_norms = U.pow(2).sum(dim=-2).sqrt().mean(dim=(0, 1))  # [r]
+        for i, n in enumerate(axis_norms.tolist()):
+            metrics[f"metric_axis{i}_norm"] = n
 
         # Gamma
         anchors = getattr(model, "anchors", None)
@@ -268,15 +270,20 @@ class DRMTrainer:
             coords = torch.sigmoid(block0.attn.q_to_manifold(q[:, 0]))
 
         # coords.detach() ja garantido pelo no_grad acima
-        # Mas G precisa de grad para MetricNet aprender
-        G = metric_net(coords.detach().reshape(-1, metric_net.dim))
-        G = G.view(B, T, metric_net.dim, metric_net.dim)
+        # Mas U precisa de grad para MetricNet aprender
+        U = metric_net(coords.detach().reshape(-1, metric_net.dim))
+        U = U.view(B, T, metric_net.dim, metric_net.rank)
 
-        drm_loss = drm_loss + lambda_reg * metric_regularization(G)
+        drm_loss = drm_loss + lambda_reg * metric_regularization(U)
+
+        # Ortogonalidade dos eixos semanticos
+        from ..losses import orthogonality_loss
+        lambda_ortho = self.config.get("lambda_ortho", 0.01)
+        drm_loss = drm_loss + lambda_ortho * orthogonality_loss(U)
 
         if self.global_step >= warmup_div:
             target_var = self.config.get("target_metric_var", 0.001)
-            drm_loss = drm_loss + lambda_div * metric_diversity_loss(G, target_var)
+            drm_loss = drm_loss + lambda_div * metric_diversity_loss(U, target_var)
 
         return drm_loss
 

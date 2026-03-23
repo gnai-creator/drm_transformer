@@ -31,7 +31,11 @@ class DRMTransformer(nn.Module):
         self.token_emb = nn.Embedding(config.vocab_size, config.d_model)
         self.emb_dropout = nn.Dropout(config.dropout)
 
-        self.metric_net = MetricNet(config.d_manifold, config.metric_hidden)
+        self.metric_net = MetricNet(
+            config.d_manifold,
+            rank=getattr(config, "metric_rank", 4),
+            hidden=config.metric_hidden,
+        )
 
         self.gravity_field = (
             GravityField(

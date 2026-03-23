@@ -70,8 +70,8 @@ class DRMFoliationEvaluator:
             coords = torch.sigmoid(block0.attn.q_to_manifold(q[:, 0]))
 
             coords_flat = coords.reshape(-1, d)
-            G = self.model.metric_net(coords_flat)
-            G_diag = G.diagonal(dim1=-2, dim2=-1).reshape(B, T, d)
+            U = self.model.metric_net(coords_flat)  # [B*T, D, r]
+            G_diag = (1.0 + U.pow(2).sum(dim=-1)).reshape(B, T, d)
 
             gamma = gamma_scale(coords, self.model.anchors, c_param=self.config.gamma_c)
 

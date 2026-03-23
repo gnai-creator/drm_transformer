@@ -149,10 +149,11 @@ def extract_vectors(
 
             coords = q_manifold  # [B, T, d_manifold]
 
-            # G(x) via MetricNet
+            # U(x) low-rank via MetricNet -> diagonal de G = I + U U^T
             coords_flat = coords.reshape(-1, d_manifold)
-            G = model.metric_net(coords_flat)  # [B*T, D, D]
-            G_diag = G.diagonal(dim1=-2, dim2=-1)  # [B*T, D]
+            U = model.metric_net(coords_flat)  # [B*T, D, r]
+            # Diagonal de G = I + U U^T: diag_i = 1 + sum_j U[i,j]^2
+            G_diag = 1.0 + U.pow(2).sum(dim=-1)  # [B*T, D]
             G_diag = G_diag.reshape(B, T, d_manifold)
 
             # Gamma

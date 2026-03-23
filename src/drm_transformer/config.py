@@ -37,12 +37,14 @@ class DRMTransformerConfig:
 
     d_manifold: int = 16
     metric_hidden: int = 64
+    metric_rank: int = 4
     n_quad: int = 0
 
     n_anchors: int = 6
 
     gamma_enabled: bool = True
     gamma_c: float = 4.0
+    gamma_alpha: float = 0.0
 
     temperature_init: float = 1.0
     temperature_min: float = 0.5

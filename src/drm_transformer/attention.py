@@ -1,4 +1,4 @@
-"""DRM Attention com distancia geodesica, RoPE e gamma-scaling."""
+"""DRM Attention com distancia geodesica low-rank, RoPE e gamma-scaling."""
 
 import torch
 import torch.nn as nn
@@ -63,10 +63,14 @@ def apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.T
 
 
 class DRMAttention(nn.Module):
-    """Multi-Head Attention com distancia geodesica no manifold DRM.
+    """Multi-Head Attention com distancia geodesica low-rank no manifold DRM.
 
     Usa score(i,j) = -d_G(q_i, k_j) / temp em vez de dot product,
-    onde d_G e a distancia Mahalanobis local sob G(x).
+    onde d_G e a distancia sob G(x) = I + U(x) U(x)^T.
+
+    dist^2 = ||delta||^2 + ||U^T delta||^2
+
+    Complexidade: O(T^2 * D * r) onde r e o rank (tipicamente 4).
 
     Args:
         config: Configuracao do DRM Transformer.
@@ -80,6 +84,7 @@ class DRMAttention(nn.Module):
         self.d_manifold = config.d_manifold
         self.gamma_enabled = config.gamma_enabled
         self.gamma_c = config.gamma_c
+        self.gamma_alpha = getattr(config, "gamma_alpha", 0.0)
 
         assert config.d_model % config.n_heads == 0
 
@@ -112,18 +117,21 @@ class DRMAttention(nn.Module):
 
         Args:
             x: [B, T, d_model] embeddings.
-            metric_net: MetricNet para computar G(x).
-            gravity_field: GravityField opcional para deformar G.
+            metric_net: MetricNet para computar U(x) low-rank.
+            gravity_field: GravityField opcional para deformar metrica.
             anchor_coords: [A, d_manifold] anchors para gamma-scaling.
 
         Returns:
             Tensor [B, T, d_model] resultado da attention.
         """
         B, T, C = x.shape
+        D = self.d_manifold
+        H = self.n_heads
+        r = metric_net.rank
 
-        q = self.q_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
-        k = self.k_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
-        v = self.v_proj(x).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+        q = self.q_proj(x).view(B, T, H, self.d_head).transpose(1, 2)
+        k = self.k_proj(x).view(B, T, H, self.d_head).transpose(1, 2)
+        v = self.v_proj(x).view(B, T, H, self.d_head).transpose(1, 2)
 
         cos, sin = self.rope(q, T)
         q = apply_rope(q, cos, sin)
@@ -132,36 +140,60 @@ class DRMAttention(nn.Module):
         q_manifold = torch.sigmoid(self.q_to_manifold(q))
         k_manifold = torch.sigmoid(self.k_to_manifold(k))
 
-        q_flat = q_manifold.reshape(-1, self.d_manifold)
-        G = metric_net(q_flat)
-        G = G.view(B, self.n_heads, T, self.d_manifold, self.d_manifold)
+        # Low-rank U(x): [B*H*T, D, r] -> [B, H, T, D, r]
+        q_flat = q_manifold.reshape(-1, D)
+        U = metric_net(q_flat)
+        U = U.view(B, H, T, D, r)
 
+        # Gravidade per-head (modifica U via scaling)
         if gravity_field is not None:
-            mass = gravity_field.compute_mass(q_manifold[:, 0])
-            for h in range(self.n_heads):
-                G_h = G[:, h]
-                G_h = gravity_field.deform_metric(
-                    G_h, q_manifold[:, h], mass,
-                )
-                G[:, h] = G_h
+            U_heads = []
+            for h in range(H):
+                q_h = q_manifold[:, h]  # [B, T, D]
+                mass_h = gravity_field.compute_mass(q_h)  # [B, T, 1]
+                U_h = gravity_field.deform_U(U[:, h], q_h, mass_h)
+                U_heads.append(U_h)
+            U = torch.stack(U_heads, dim=1)
 
-        delta = q_manifold.unsqueeze(3) - k_manifold.unsqueeze(2)
+        # Distancia low-rank: dist^2 = ||delta||^2 + ||U^T delta||^2
+        # Complexidade: O(T^2 * D * r)
+        delta = q_manifold.unsqueeze(3) - k_manifold.unsqueeze(2)  # [B, H, T, T, D]
 
-        G_expanded = G.unsqueeze(3)
-        delta_col = delta.unsqueeze(-1)
-        Gd = torch.matmul(G_expanded, delta_col).squeeze(-1)
+        # Parte euclidiana: ||delta||^2
+        dist_euc = (delta ** 2).sum(dim=-1)  # [B, H, T, T]
 
-        dist_sq = (Gd * delta).sum(dim=-1)
-        dist_sq = dist_sq.clamp(min=0.0)
+        # Parte low-rank: ||U^T delta||^2
+        # U: [B, H, T, D, r] -> U_exp: [B, H, T, 1, D, r]
+        U_exp = U.unsqueeze(3)
+        delta_col = delta.unsqueeze(-1)  # [B, H, T, T, D, 1]
+        Ut_delta = torch.matmul(
+            U_exp.transpose(-1, -2), delta_col,
+        ).squeeze(-1)  # [B, H, T, T, r]
+        dist_lr = (Ut_delta ** 2).sum(dim=-1)  # [B, H, T, T]
 
+        dist_sq = (dist_euc + dist_lr).clamp(min=0.0)
+
+        # Gamma-scaling com log-gamma + annealing + clamp
         if self.gamma_enabled and anchor_coords is not None:
             gamma = gamma_scale(
                 q_manifold[:, 0],
                 anchor_coords,
                 c_param=self.gamma_c,
-            )
-            gamma_sq = (gamma ** 2).unsqueeze(1)
-            dist_sq = dist_sq * gamma_sq
+            )  # [B, T, 1]
+
+            # Normalizacao adaptativa de distancia antes do gamma
+            dist_mean = dist_sq.detach().mean(dim=-1, keepdim=True) + 1e-6
+            dist_sq = dist_sq / dist_mean
+
+            # Log-gamma suavizado com annealing
+            gamma = gamma.clamp(max=3.0)
+            gamma_log = torch.log1p(gamma - 1.0)
+            alpha = self.gamma_alpha
+            effective_gamma = 1.0 + alpha * gamma_log  # [B, T, 1]
+
+            # Broadcast: [B, T, 1] -> [B, 1, T, 1] para [B, H, T, T]
+            effective_gamma_sq = (effective_gamma ** 2).unsqueeze(1)
+            dist_sq = dist_sq * effective_gamma_sq
 
         temp = self.temperature.clamp(min=self.temperature_min)
         attn = -dist_sq / temp

@@ -70,19 +70,85 @@ class GravityField(nn.Module):
         """
         return self.mass_net(coords)
 
+    def _compute_rff_influence(
+        self,
+        coords: torch.Tensor,
+        mass: torch.Tensor,
+    ) -> torch.Tensor:
+        """Computa influencia gravitacional escalar via RFF.
+
+        Args:
+            coords: [B, T, D] coordenadas dos tokens.
+            mass: [B, T, 1] massa de cada token.
+
+        Returns:
+            Tensor [B, T, 1] com influencia gravitacional por token.
+        """
+        phi = self._rff_features(coords)  # [B, T, R]
+        phi_weighted = phi * mass  # [B, T, R]
+        phi_sum = phi_weighted.sum(dim=1, keepdim=True)  # [B, 1, R]
+        return (phi * phi_sum).sum(dim=-1, keepdim=True)  # [B, T, 1]
+
+    def deform_U(
+        self,
+        U: torch.Tensor,
+        coords: torch.Tensor,
+        mass: torch.Tensor,
+    ) -> torch.Tensor:
+        """Deforma fator low-rank U(x) pela gravidade dos tokens via RFF.
+
+        Escala U pela raiz da influencia gravitacional, de modo que
+        G_grav = I + U_grav U_grav^T incorpora curvatura gravitacional.
+        O fator sqrt garante que a deformacao em G seja proporcional
+        a influencia (nao ao quadrado dela).
+
+        Complexidade: O(T * R).
+
+        Args:
+            U: [B, T, D, r] fator low-rank da metrica.
+            coords: [B, T, D] coordenadas dos tokens.
+            mass: [B, T, 1] massa de cada token.
+
+        Returns:
+            Tensor [B, T, D, r] com fator low-rank deformado.
+        """
+        grav_influence = self._compute_rff_influence(coords, mass)  # [B, T, 1]
+        # sqrt(1 + s*g) escala U tal que U U^T cresce linearmente com influencia
+        scale = torch.sqrt(
+            1.0 + self.strength * grav_influence,
+        ).unsqueeze(-1)  # [B, T, 1, 1]
+        return U * scale
+
+    def deform_metric_diag(
+        self,
+        G_diag: torch.Tensor,
+        coords: torch.Tensor,
+        mass: torch.Tensor,
+    ) -> torch.Tensor:
+        """Deforma diagonal de G(x) pela gravidade dos tokens via RFF.
+
+        Mantida para backward compatibility.
+
+        Args:
+            G_diag: [B, T, D] diagonal da metrica base.
+            coords: [B, T, D] coordenadas dos tokens.
+            mass: [B, T, 1] massa de cada token.
+
+        Returns:
+            Tensor [B, T, D] com diagonal da metrica deformada.
+        """
+        grav_influence = self._compute_rff_influence(coords, mass)  # [B, T, 1]
+        return G_diag * (1.0 + self.strength * grav_influence)
+
     def deform_metric(
         self,
         G: torch.Tensor,
         coords: torch.Tensor,
         mass: torch.Tensor,
     ) -> torch.Tensor:
-        """Deforma G(x) pela gravidade dos tokens via RFF.
+        """Deforma G(x) pela gravidade dos tokens via RFF (versao full matrix).
 
-        Cada token com massa > 0 adiciona curvatura local.
-        Equivalente a G_grav(x) = G(x) + strength * sum_j mass_j * K(x, x_j) * I
-        onde K e o kernel Gaussiano aproximado por RFF.
-
-        Complexidade: O(T * R) em vez de O(T^2 * D).
+        Mantida para backward compatibility. Prefer deform_metric_diag.
 
         Args:
             G: [B, T, D, D] metrica base.
@@ -93,16 +159,7 @@ class GravityField(nn.Module):
             Tensor [B, T, D, D] com metrica deformada.
         """
         B, T, D = coords.shape
-
-        phi = self._rff_features(coords)  # [B, T, R]
-
-        # Ponderar features pela massa de cada token
-        phi_weighted = phi * mass  # [B, T, R]
-
-        # Influencia gravitacional acumulada via produto interno
-        # grav[b, t] = phi[b,t] . sum_s phi_weighted[b,s]
-        phi_sum = phi_weighted.sum(dim=1, keepdim=True)  # [B, 1, R]
-        grav_influence = (phi * phi_sum).sum(dim=-1, keepdim=True)  # [B, T, 1]
+        grav_influence = self._compute_rff_influence(coords, mass)  # [B, T, 1]
         grav_influence = grav_influence.unsqueeze(-1)  # [B, T, 1, 1]
 
         I = torch.eye(D, device=G.device, dtype=G.dtype)

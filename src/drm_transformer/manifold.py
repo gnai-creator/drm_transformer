@@ -139,4 +139,6 @@ def gamma_scale(
 
     gamma = 1.0 / torch.sqrt(1.0 - (v / c_param) ** 2 + eps)
 
+    gamma = gamma.clamp(max=3.0)
+
     return gamma
