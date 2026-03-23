@@ -35,7 +35,7 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 
 ## Arquitetura
 
-```
+```txt
  input_ids [B, T]
       |
       v
@@ -215,7 +215,7 @@ Baseado em tres papers de Felipe Maya Muniz:
 
 ## Estrutura do Projeto
 
-```
+```txt
 drm_transformer/
 |-- README.md
 |-- ARCHITECTURE.md
