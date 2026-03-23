@@ -40,6 +40,11 @@ from drm_transformer.training.distributed import (
 )
 from drm_transformer.training.trainer import DRMTrainer
 from drm_transformer.training.data import create_dataloader
+from drm_transformer.training.reproducibility import (
+    set_seed,
+    set_deterministic,
+    build_run_manifest,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -92,6 +97,8 @@ def main():
     parser.add_argument("--data-dir", default="", help="Override diretorio de dados")
     parser.add_argument("--eval-data-dir", default="", help="Dados de avaliacao")
     parser.add_argument("--override", nargs="*", help="Overrides: key=value")
+    parser.add_argument("--seed", type=int, default=42, help="Seed global (default: 42)")
+    parser.add_argument("--deterministic", action="store_true", help="Ativa flags deterministicas")
     args = parser.parse_args()
 
     config = _load_config(args.config)
@@ -111,6 +118,13 @@ def main():
                     config[key] = float(val)
                 else:
                     config[key] = val
+
+    # Reprodutibilidade: seed + determinismo
+    seed = args.seed
+    set_seed(seed)
+    if args.deterministic:
+        set_deterministic(warn_only=True)
+    config["seed"] = seed
 
     data_dir = config.get("data_dir", "data/")
     data_vocab = _detect_vocab_size(data_dir)
@@ -183,6 +197,16 @@ def main():
         logger.info("[MODEL] Memoria estimada (model+optim): %.1f GB", total_gb)
 
     model = wrap_model_ddp(model, config, device)
+
+    # Run manifest (apenas no processo principal)
+    if is_main:
+        save_dir = config.get("save_dir", "checkpoints")
+        manifest = build_run_manifest(
+            config=config,
+            seed=seed,
+            config_path=args.config,
+            save_dir=save_dir,
+        )
 
     train_loader = create_dataloader(
         data_dir=data_dir,
