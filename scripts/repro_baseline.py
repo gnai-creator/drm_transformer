@@ -163,6 +163,10 @@ def main():
         with open(ablation_results) as f:
             report["ablations"] = json.load(f)
 
+    # KPIs consolidados
+    report["kpis"] = _compute_kpis(report)
+    _print_kpis(report["kpis"])
+
     # Salvar relatorio
     report_path = Path("repro_report.json")
     with open(report_path, "w") as f:
@@ -170,6 +174,166 @@ def main():
     logger.info("[SAVED] %s", report_path)
 
     return 0 if steps_ok == steps_total else 1
+
+
+def _compute_kpis(report: dict) -> dict:
+    """Computa KPIs consolidados a partir do relatorio.
+
+    KPIs:
+      - reproducibility: desvio de PPL entre runs (requer 2+ runs)
+      - reliability: % de steps que terminaram sem erro
+      - cost: tokens/s e horas por experimento
+      - quality: melhor PPL do baseline e das ablacoes
+      - comparability: % de experimentos com manifest completo
+    """
+    kpis = {}
+    baseline = report.get("baseline", {})
+
+    # --- Reliability: % runs sem erro ---
+    steps_ok = report.get("steps_ok", 0)
+    steps_total = report.get("steps_total", 1)
+    kpis["reliability"] = {
+        "steps_ok": steps_ok,
+        "steps_total": steps_total,
+        "success_rate_pct": round(100.0 * steps_ok / max(steps_total, 1), 1),
+    }
+
+    # --- Cost: tokens/s e tempo ---
+    kpis["cost"] = {
+        "avg_tokens_per_s": baseline.get("avg_tokens_per_s"),
+        "total_time_s": report.get("total_time_s"),
+        "total_time_min": round(report.get("total_time_s", 0) / 60, 1),
+        "baseline_time_s": baseline.get("total_time_s"),
+        "baseline_tokens": baseline.get("total_tokens"),
+    }
+
+    # --- Quality: PPL baseline + ablacoes ---
+    quality = {
+        "baseline_val_ppl": baseline.get("best_val_ppl"),
+        "baseline_val_loss": baseline.get("best_val_loss"),
+    }
+
+    ablations = report.get("ablations", [])
+    if ablations:
+        best_ablation = None
+        worst_ablation = None
+        for ab in ablations:
+            name = ab.get("name", "?")
+            ppl = ab.get("best_val_ppl")
+            if ppl is None:
+                continue
+            quality[f"{name}_val_ppl"] = ppl
+            if best_ablation is None or ppl < best_ablation[1]:
+                best_ablation = (name, ppl)
+            if worst_ablation is None or ppl > worst_ablation[1]:
+                worst_ablation = (name, ppl)
+
+        if best_ablation:
+            quality["best_variant"] = best_ablation[0]
+            quality["best_variant_ppl"] = best_ablation[1]
+        if worst_ablation:
+            quality["worst_variant"] = worst_ablation[0]
+            quality["worst_variant_ppl"] = worst_ablation[1]
+        if best_ablation and worst_ablation:
+            quality["ppl_spread"] = round(worst_ablation[1] - best_ablation[1], 2)
+
+    kpis["quality"] = quality
+
+    # --- Comparability: % experimentos com manifest ---
+    manifest_dirs = [
+        Path("checkpoints/baseline_1m"),
+        Path("checkpoints/ablations/full"),
+        Path("checkpoints/ablations/no_gravity"),
+        Path("checkpoints/ablations/no_gamma"),
+        Path("checkpoints/ablations/no_variable_dim"),
+    ]
+    n_with_manifest = sum(
+        1 for d in manifest_dirs
+        if (d / "run_manifest.json").exists()
+    )
+    n_with_metrics = sum(
+        1 for d in manifest_dirs
+        if (d / "metrics.json").exists()
+    )
+    n_total = sum(1 for d in manifest_dirs if d.exists())
+    kpis["comparability"] = {
+        "experiments_total": n_total,
+        "with_manifest": n_with_manifest,
+        "with_metrics": n_with_metrics,
+        "manifest_pct": round(100.0 * n_with_manifest / max(n_total, 1), 1),
+        "complete_pct": round(
+            100.0 * min(n_with_manifest, n_with_metrics) / max(n_total, 1), 1
+        ),
+    }
+
+    # --- Reproducibility: placeholder (requer 2+ runs) ---
+    kpis["reproducibility"] = {
+        "note": "Rodar 2x com mesma seed para medir desvio de PPL",
+        "ppl_deviation": None,
+        "seeds_tested": [report.get("seed")],
+    }
+
+    return kpis
+
+
+def _print_kpis(kpis: dict) -> None:
+    """Imprime dashboard de KPIs no console."""
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info("  KPI DASHBOARD")
+    logger.info("=" * 60)
+
+    # Reliability
+    rel = kpis.get("reliability", {})
+    logger.info("")
+    logger.info("  RELIABILITY")
+    logger.info("    Success rate:    %s%% (%d/%d steps)",
+                rel.get("success_rate_pct", "?"),
+                rel.get("steps_ok", 0),
+                rel.get("steps_total", 0))
+
+    # Cost
+    cost = kpis.get("cost", {})
+    logger.info("")
+    logger.info("  COST")
+    logger.info("    Tokens/s:        %s", cost.get("avg_tokens_per_s", "?"))
+    logger.info("    Total time:      %s min", cost.get("total_time_min", "?"))
+
+    # Quality
+    qual = kpis.get("quality", {})
+    logger.info("")
+    logger.info("  QUALITY")
+    logger.info("    Baseline PPL:    %s", qual.get("baseline_val_ppl", "?"))
+    if qual.get("best_variant"):
+        logger.info("    Best variant:    %s (PPL=%s)",
+                    qual["best_variant"], qual.get("best_variant_ppl", "?"))
+    if qual.get("worst_variant"):
+        logger.info("    Worst variant:   %s (PPL=%s)",
+                    qual["worst_variant"], qual.get("worst_variant_ppl", "?"))
+    if qual.get("ppl_spread") is not None:
+        logger.info("    PPL spread:      %s", qual["ppl_spread"])
+
+    # Comparability
+    comp = kpis.get("comparability", {})
+    logger.info("")
+    logger.info("  COMPARABILITY")
+    logger.info("    Manifest:        %s%% (%d/%d)",
+                comp.get("manifest_pct", "?"),
+                comp.get("with_manifest", 0),
+                comp.get("experiments_total", 0))
+    logger.info("    Complete:        %s%%", comp.get("complete_pct", "?"))
+
+    # Reproducibility
+    repro = kpis.get("reproducibility", {})
+    logger.info("")
+    logger.info("  REPRODUCIBILITY")
+    if repro.get("ppl_deviation") is not None:
+        logger.info("    PPL deviation:   %s", repro["ppl_deviation"])
+    else:
+        logger.info("    PPL deviation:   (pendente — rodar 2x com mesma seed)")
+
+    logger.info("")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

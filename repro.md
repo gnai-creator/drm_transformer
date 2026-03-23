@@ -221,7 +221,48 @@ print('PASS' if all(
 "
 ```
 
-## 8. Limitacoes Conhecidas
+## 8. KPIs de Acompanhamento
+
+O `repro_baseline.py` gera um dashboard de KPIs automaticamente no final:
+
+| KPI | Metrica | Fonte |
+|-----|---------|-------|
+| **Reprodutibilidade** | Desvio de PPL entre runs com mesma seed | 2 runs + comparacao |
+| **Confiabilidade** | % de steps que terminam sem erro | `repro_report.json` |
+| **Custo** | Tokens/s e tempo total por experimento | `metrics.json` |
+| **Qualidade** | Melhor PPL + spread entre ablacoes | `metrics.json` + `results_ablations.json` |
+| **Comparabilidade** | % de experimentos com manifest completo | `run_manifest.json` |
+
+Exemplo de output:
+
+```
+  KPI DASHBOARD
+  ============================================================
+
+  RELIABILITY
+    Success rate:    100.0% (5/5 steps)
+
+  COST
+    Tokens/s:        45000
+    Total time:      12.3 min
+
+  QUALITY
+    Baseline PPL:    125.3
+    Best variant:    full (PPL=125.3)
+    Worst variant:   no_gravity (PPL=142.1)
+    PPL spread:      16.8
+
+  COMPARABILITY
+    Manifest:        100.0% (5/5)
+    Complete:        100.0%
+
+  REPRODUCIBILITY
+    PPL deviation:   (pendente — rodar 2x com mesma seed)
+```
+
+Os KPIs tambem ficam salvos em `repro_report.json` sob a chave `"kpis"`.
+
+## 9. Limitacoes Conhecidas
 
 - **Multi-GPU**: NCCL pode introduzir nao-determinismo em reducoes.
   Para determinismo total, use single GPU.
