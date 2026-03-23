@@ -2,7 +2,7 @@
 vocab_size: 50000
 d_model: 160
 n_heads: 4
-n_layers: 4
+n_layers: 6
 d_ff: 640
 max_seq_len: 512
 dropout: 0.1
@@ -19,7 +19,7 @@ early_stopping_patience: 5
 # --- Manifold DRM ---
 d_manifold: 6
 metric_hidden: 24
-metric_rank: 5
+metric_rank: 4
 n_quad: 0
 
 # --- Gamma-Scaling ---
@@ -39,7 +39,7 @@ variable_dim: true
 lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.03
 lambda_ortho: 0.01
-metric_diversity_warmup_steps: 1500
+metric_diversity_warmup_steps: 2500
 save_dir: checkpoints/multilingual_10m/run_1
 save_interval: 500
 log_interval: 50

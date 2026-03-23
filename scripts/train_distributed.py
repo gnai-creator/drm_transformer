@@ -139,7 +139,7 @@ def main():
         bias=config.get("bias", False),
         d_manifold=config.get("d_manifold", 16),
         metric_hidden=config.get("metric_hidden", 64),
-        metric_rank=config.get("metric_rank", 4),
+        metric_rank=config.get("metric_rank", 4),   # <-- adicionar aqui
         n_quad=config.get("n_quad", 0),
         gamma_enabled=config.get("gamma_enabled", True),
         gamma_c=config.get("gamma_c", 4.0),

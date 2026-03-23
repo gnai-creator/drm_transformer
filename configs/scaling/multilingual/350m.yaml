@@ -40,8 +40,8 @@ variable_dim: true
 lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.05
 lambda_ortho: 0.01
-metric_diversity_warmup_steps: 5000
-save_dir: checkpoints/multilingual_350m
+metric_diversity_warmup_steps: 10000
+save_dir: checkpoints/multilingual_350m/run_1
 save_interval: 500
 log_interval: 50
 target_metric_var: 0.001
