@@ -278,6 +278,17 @@ results = evaluator.evaluate(loader, max_tokens=100_000)
 print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
 ```
 
+### Validacao Empirica (testes + figuras)
+
+```bash
+# Roda 4 testes + gera 5 figuras (PCA, t-SNE, heatmap, separation, combined)
+python empirical/tests/run_all.py
+```
+
+Saidas:
+- `empirical/results.json` — metricas de projecao, estatisticas dos eixos, separacao semantica, correlacao geometrica
+- `empirical/figures/` — PCA, t-SNE, axis heatmap, axis separation, painel combinado 2x3
+
 ---
 
 ## Scaling Configs
