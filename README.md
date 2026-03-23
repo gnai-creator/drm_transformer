@@ -24,7 +24,7 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 |---|---|---|---|
 | **Espaco de embeddings** | R^d plano, Euclidiano | Manifold curvo com metrica G(x) | Mapa plano vs superficie da Terra: distancias reais dependem do terreno |
 | **Attention score** | dot-product: q^T k | Distancia geodesica: -d_G(q,k)/temp | Medir "proximidade" em linha recta vs seguir o caminho real pelo terreno |
-| **Metrica** | Fixa (identidade implicita) | Aprendida por posicao: G(x) = L(x) L(x)^T | Regua rigida vs regua elastica que estica conforme o lugar |
+| **Metrica** | Fixa (identidade implicita) | Aprendida por posicao: G(x) = I + U(x) U(x)^T (low-rank) | Regua rigida vs regua elastica que estica conforme o lugar |
 | **Tokens de alta informacao** | Tratados igual a todos os outros | Deformam a metrica local (gravidade) | Estrela que curva o espaco-tempo a sua volta, atraindo o que esta perto |
 | **Dimensionalidade** | Fixa: todos os tokens usam d dimensoes | Variavel: dimD(p) por token via gate suave | Sala de d portas onde tokens simples abrem 3 e tokens complexos abrem todas |
 | **Escala de resolucao** | Uniforme em todo o espaco | Gamma-scaling: regioes distantes dos anchors recebem mais resolucao | Microscopio que amplia automaticamente as zonas menos exploradas |
@@ -41,10 +41,12 @@ num mapa plano e navegar na superficie real de um planeta.
 
 1. **Geodesic Attention** -- Distancia geodesica sob G(x) substitui dot-product
    Euclidiano. Tokens proximos no manifold recebem mais atencao.
-2. **MetricNet** -- Tensor metrico G(x) aprendido via MLP + Cholesky (SPD
-   garantido). A geometria do espaco de embeddings e aprendida end-to-end.
-3. **Gravitational Token Embedding** -- Cada token possui massa aprendida que
-   deforma G(x) na vizinhanca, atraindo tokens vizinhos (analogia com gravidade).
+2. **MetricNet** -- Tensor metrico G(x) = I + U(x)U(x)^T aprendido via MLP
+   com factorizacao low-rank (rank=4). SPD garantido por construcao. Output
+   zero-inicializado (G(x)=I no inicio, estabilidade). Geometria end-to-end.
+3. **Gravitational Token Embedding** -- Cada token possui massa aprendida
+   (via mass_net + Softplus) que deforma U(x) na vizinhanca via Random Fourier
+   Features (RFF). Complexidade O(T*n_rff) em vez de O(T^2).
 4. **DimensionalGate** -- Dimensionalidade efetiva dimD(p) varia por token via
    mascara suave. Tokens simples usam poucas dimensoes, tokens complexos usam mais.
 5. **Gamma-Scaling (Relativistic Dynamics)** -- Fator de Lorentz gamma escala
@@ -92,10 +94,12 @@ A inicializacao semantica fornece um prior geometrico interpretavel.
  |     q_m = sigmoid(W_q @ q_head)          |
  |     k_m = sigmoid(W_k @ k_head)          |
  |                                          |
- |  2. G(x) = MetricNet(q_m)  [SPD, Chol.]  |
- |     G_grav = GravityField(G, mass, q_m)  |
+ |  2. U(x) = MetricNet(q_m) [d_manifold, r]|
+ |     G(x) = I + U(x) U(x)^T  (SPD, lr)    |
+ |     U_grav = GravityField.deform_U(U,q_m)|
  |                                          |
- |  3. d^2 = (q_m - k_m)^T G_grav (q_m-k_m) |
+ |  3. delta = q_m - k_m                    |
+ |     d^2 = ||delta||^2 + ||U^T delta||^2  |
  |     d^2 *= gamma^2 (se gamma_enabled)    |
  |                                          |
  |  4. attn = softmax(-d^2 / temp) @ V      |
@@ -116,6 +120,49 @@ A inicializacao semantica fornece um prior geometrico interpretavel.
       v
   logits [B, T, V]
 ```
+
+---
+
+## DRMTransformerConfig
+
+| Campo | Tipo | Default | Descricao |
+|-------|------|---------|-----------|
+| `vocab_size` | int | 50257 | Tamanho do vocabulario |
+| `max_seq_len` | int | 1024 | Comprimento maximo da sequencia |
+| `d_model` | int | 384 | Dimensao dos embeddings |
+| `n_layers` | int | 6 | Numero de blocos transformer |
+| `n_heads` | int | 6 | Numero de heads de atencao |
+| `d_ff` | int | 1536 | Dimensao hidden do FFN |
+| `dropout` | float | 0.1 | Taxa de dropout |
+| `bias` | bool | False | Usar bias nas camadas lineares |
+| `d_manifold` | int | 16 | Dimensao do manifold |
+| `metric_hidden` | int | 64 | Largura do hidden layer do MetricNet |
+| `metric_rank` | int | 4 | Rank de U(x) em G(x) = I + UU^T |
+| `n_quad` | int | 0 | Pontos de quadratura Gauss-Legendre (0 = Mahalanobis local) |
+| `n_anchors` | int | 6 | Numero de anchors semanticos |
+| `gamma_enabled` | bool | True | Habilitar gamma-scaling (Lorentz) |
+| `gamma_c` | float | 4.0 | Limite de velocidade (c) |
+| `gamma_alpha` | float | 0.0 | Alpha para annealing log-gamma |
+| `temperature_init` | float | 1.0 | Temperatura inicial da atencao |
+| `temperature_min` | float | 0.5 | Temperatura minima (clamp) |
+| `gravity_enabled` | bool | True | Habilitar campo gravitacional |
+| `gravity_strength` | float | 0.1 | Forca da gravidade sobre U(x) |
+| `gravity_n_rff` | int | 64 | Random Fourier Features para gravidade |
+| `variable_dim` | bool | True | Habilitar DimensionalGate por token |
+
+---
+
+## Loss Functions (Regularizacao Geometrica)
+
+| Funcao | Descricao | Efeito |
+|--------|-----------|--------|
+| `metric_regularization(U)` | Penaliza norma excessiva de U(x) | Mantem G(x) proximo de I no inicio |
+| `metric_diversity_loss(U)` | Encoraja variancia de U(x) entre tokens | Previne metrica estatica (position-independent) |
+| `orthogonality_loss(U)` | Penaliza U^T U != I | Previne colapso dos eixos semanticos |
+| `axis_variance_loss(U)` | Maximiza variancia de cada eixo na sequencia | Encoraja deformacao position-dependent |
+| `anchor_alignment_loss(U, coords, anchors)` | Alinha primeiro eixo de U com anchor mais proximo | Sugere orientacao semantica (soft) |
+
+Pesos configurados via `lambda_metric_reg`, `lambda_metric_diversity`, `lambda_ortho` no config de treino.
 
 ---
 
@@ -238,6 +285,8 @@ print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
 | Config | Params | d_model | Layers | Heads | d_manifold | Context |
 |--------|--------|---------|--------|-------|------------|---------|
 | [1m](configs/scaling/1m.yaml) | ~1M | 64 | 4 | 2 | 4 | 256 |
+| [5m](configs/scaling/5m.yaml) | ~5M | 96 | 6 | 3 | 4 | 512 |
+| [10m](configs/scaling/10m.yaml) | ~10M | 160 | 4 | 4 | 6 | 512 |
 | [15m](configs/scaling/15m.yaml) | ~15M | 256 | 6 | 4 | 8 | 512 |
 | [50m](configs/scaling/50m.yaml) | ~50M | 512 | 8 | 8 | 12 | 1024 |
 | [350m](configs/scaling/350m.yaml) | ~350M | 1024 | 24 | 16 | 16 | 1024 |
@@ -289,12 +338,12 @@ drm_transformer/
 |   |-- config.py              # DRMTransformerConfig (dataclass)
 |   |-- model.py               # DRMTransformer (modelo principal)
 |   |-- attention.py           # DRMAttention + RotaryEmbedding + apply_rope
-|   |-- metric_net.py          # MetricNet: G(x) via MLP + Cholesky (SPD)
+|   |-- metric_net.py          # MetricNet: U(x) via MLP, G(x) = I + UU^T (low-rank SPD)
 |   |-- manifold.py            # ManifoldProjection + gamma_scale
-|   |-- gravity.py             # GravityField: massa + deformacao metrica
+|   |-- gravity.py             # GravityField: massa + RFF + deformacao de U(x)
 |   |-- dimensional_gate.py    # DimensionalGate: dimD(p) variavel
 |   |-- layers.py              # RMSNorm, FeedForward (SwiGLU), DRMTransformerBlock
-|   |-- losses.py              # metric_regularization + metric_diversity_loss
+|   |-- losses.py              # 5 losses: metric_reg, diversity, orthogonality, axis_var, anchor_align
 |   |
 |   +-- training/
 |       |-- __init__.py
@@ -312,12 +361,19 @@ drm_transformer/
 |   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
 |   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
-|-- configs/scaling/            # 9 configs: 1M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
+|-- configs/scaling/            # 11 configs: 1M, 5M, 10M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
 |   +-- multilingual/          # Mesmas configs com vocab_size=50000 (o200k_base subset)
 |
 |-- eval-results/              # Resultados de foliation e avaliacao
 |
-+-- docs/                      # Documentacao
+|-- empirical/                 # Validacao empirica dos eixos semanticos
+|   |-- results.json           # Resultados consolidados
+|   |-- figures/               # Plots: PCA, t-SNE, axis heatmap, separation
+|   +-- tests/                 # 4 testes: axes_projection, axis_stats, semantic_separation, geometry_correlation
+|
+|-- docs/
+|   |-- process/               # Documentacao de cada mudanca (numerada + datada)
++   +-- scaling/runpod/        # Guia de scaling para RunPod
 ```
 
 ---
