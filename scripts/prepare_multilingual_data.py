@@ -190,7 +190,7 @@ def pass1_stream_and_save_raw(
             if len(text) < 50:
                 continue
 
-            tokens = encoder.encode(text, allowed_special=set())
+            tokens = encoder.encode(text, disallowed_special=())
             freq.update(tokens)
             buffer.extend(tokens)
             lang_tokens += len(tokens)
