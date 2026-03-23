@@ -10,7 +10,7 @@ bias: false
 batch_size: 4
 learning_rate: 0.0003
 warmup_steps: 2000
-total_tokens: 50_000_000_000
+total_tokens: 26_000_000_000
 mixed_precision: bf16
 gradient_accumulation_steps: 32
 gradient_checkpointing: true
@@ -30,6 +30,8 @@ gamma_c: 4.47
 # --- Gravidade ---
 gravity_enabled: true
 gravity_strength: 0.03
+gravity_n_rff: 64
+n_anchors: 6
 
 # --- Dimensionalidade variavel ---
 variable_dim: true

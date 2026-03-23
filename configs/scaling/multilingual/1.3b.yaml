@@ -4,13 +4,13 @@ d_model: 2048
 n_heads: 16
 n_layers: 24
 d_ff: 5504
-max_seq_len: 2048
+max_seq_len: 512
 dropout: 0.0
 bias: false
-batch_size: 4
+batch_size: 8
 learning_rate: 0.0003
 warmup_steps: 2000
-total_tokens: 50_000_000_000
+total_tokens: 15_000_000_000
 mixed_precision: bf16
 gradient_accumulation_steps: 32
 gradient_checkpointing: true
@@ -30,6 +30,8 @@ gamma_c: 4.47
 # --- Gravidade ---
 gravity_enabled: true
 gravity_strength: 0.03
+gravity_n_rff: 64
+n_anchors: 6
 
 # --- Dimensionalidade variavel ---
 variable_dim: true
@@ -38,7 +40,7 @@ variable_dim: true
 lambda_metric_reg: 0.0005
 lambda_metric_diversity: 0.03
 metric_diversity_warmup_steps: 10000
-save_dir: checkpoints/multilingual_1.3b
+save_dir: checkpoints/multilingual_1.3b/run_1
 save_interval: 500
 log_interval: 50
 target_metric_var: 0.001

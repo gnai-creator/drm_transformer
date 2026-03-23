@@ -28,6 +28,8 @@ gamma_c: 2.83
 # --- Gravidade ---
 gravity_enabled: true
 gravity_strength: 0.1
+gravity_n_rff: 64
+n_anchors: 6
 
 # --- Dimensionalidade variavel ---
 variable_dim: true
