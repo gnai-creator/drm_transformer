@@ -1,7 +1,7 @@
 """Prepara dados multilingues para treino do DRM Transformer.
 
 Pipeline:
-1. Baixa FineWeb-Edu (subset multilingue) do HuggingFace
+1. Baixa Wikipedia multilingue do HuggingFace (publico, sem auth)
 2. Tokeniza com tiktoken o200k_base
 3. Conta frequencias e cria mapping para top-K tokens
 4. Remapeia tokens e salva shards uint16
@@ -30,15 +30,23 @@ from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
-# Linguas disponiveis no FineWeb-Edu 2
-FINEWEB_EDU_LANGS = {
-    "en": "HuggingFaceFW/fineweb-edu-2",
-    "pt": "HuggingFaceFW/fineweb-edu-2",
-    "es": "HuggingFaceFW/fineweb-edu-2",
-    "fr": "HuggingFaceFW/fineweb-edu-2",
-    "de": "HuggingFaceFW/fineweb-edu-2",
-    "it": "HuggingFaceFW/fineweb-edu-2",
-    "zh": "HuggingFaceFW/fineweb-edu-2",
+# Wikipedia multilingual (publico, sem auth)
+WIKI_LANGS = {
+    "en": "20231101.en",
+    "pt": "20231101.pt",
+    "es": "20231101.es",
+    "fr": "20231101.fr",
+    "de": "20231101.de",
+    "it": "20231101.it",
+    "zh": "20231101.zh",
+    "ja": "20231101.ja",
+    "ru": "20231101.ru",
+    "ar": "20231101.ar",
+    "ko": "20231101.ko",
+    "nl": "20231101.nl",
+    "pl": "20231101.pl",
+    "sv": "20231101.sv",
+    "tr": "20231101.tr",
 }
 
 
@@ -69,19 +77,21 @@ def load_texts(
     for lang in langs:
         logger.info("[LOAD] %s: ~%dK tokens", lang, tokens_per_lang // 1000)
 
+        wiki_config = WIKI_LANGS.get(lang, f"20231101.{lang}")
+
         try:
             ds = load_dataset(
-                "HuggingFaceFW/fineweb-edu-2",
-                name=lang,
+                "wikimedia/wikipedia",
+                wiki_config,
                 split="train",
                 streaming=True,
-                trust_remote_code=True,
             )
         except Exception as e:
             logger.warning("[WARN] %s nao disponivel: %s", lang, e)
             continue
 
         char_count = 0
+        lang_start = len(texts)
         for example in ds:
             text = example.get("text", "")
             if len(text) < 50:
@@ -91,7 +101,8 @@ def load_texts(
             if char_count >= chars_per_lang:
                 break
 
-        logger.info("  %s: %d textos, ~%dK chars", lang, len(texts), char_count // 1000)
+        n_texts = len(texts) - lang_start
+        logger.info("  %s: %d textos, ~%dK chars", lang, n_texts, char_count // 1000)
 
     return texts
 
