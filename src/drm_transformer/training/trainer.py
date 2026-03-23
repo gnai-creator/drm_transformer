@@ -357,7 +357,7 @@ class DRMTrainer:
                 self.global_step += 1
 
                 if is_main and self.global_step % log_interval == 0:
-                    avg_loss = running_loss / log_interval
+                    avg_loss = running_loss / (log_interval * accum)
                     elapsed = time.time() - t0
                     batch_sz = self.config.get("batch_size", 16)
                     seq_len = self.config.get("max_seq_len", 1024)
