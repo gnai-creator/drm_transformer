@@ -28,8 +28,10 @@ FIGURES_DIR = _ROOT / "empirical" / "figures"
 
 # Checkpoint global — setado por run_all.py via --checkpoint
 _CHECKPOINT_PATH: Optional[str] = None
-# Vocab mapping: gpt2_token_id (str) -> remapped_id (int)
+# Vocab mapping: original_token_id (str) -> remapped_id (int)
 _VOCAB_MAPPING: Optional[Dict[str, int]] = None
+# Tokenizer usado pelo mapping (gpt2 ou o200k_base)
+_VOCAB_TOKENIZER: Optional[str] = None
 
 
 def set_checkpoint(path: Optional[str]) -> None:
@@ -48,19 +50,24 @@ def set_output_dir(path: str) -> None:
 
 def _load_vocab_mapping(data_dir: str) -> None:
     """Carrega vocab_mapping.json se existir no data_dir."""
-    global _VOCAB_MAPPING
+    global _VOCAB_MAPPING, _VOCAB_TOKENIZER
     mapping_path = Path(data_dir) / "vocab_mapping.json"
     if not mapping_path.exists():
-        # Tentar relativo ao _ROOT
         mapping_path = _ROOT / data_dir / "vocab_mapping.json"
     if mapping_path.exists():
         with open(mapping_path) as f:
             data = json.load(f)
         if "mapping" in data:
             _VOCAB_MAPPING = data["mapping"]
+            meta = data.get("metadata", {})
+            _VOCAB_TOKENIZER = meta.get("tokenizer", "gpt2")
         else:
             _VOCAB_MAPPING = data
-        logger.info("[VOCAB] Mapping carregado: %s (%d entries)", mapping_path, len(_VOCAB_MAPPING))
+            _VOCAB_TOKENIZER = "gpt2"
+        logger.info(
+            "[VOCAB] Mapping carregado: %s (%d entries, tokenizer=%s)",
+            mapping_path, len(_VOCAB_MAPPING), _VOCAB_TOKENIZER,
+        )
     else:
         logger.info("[VOCAB] Sem vocab_mapping.json em %s — usando modulo", data_dir)
 
@@ -173,9 +180,14 @@ def create_model(
 
 
 def get_tokenizer():
-    """Retorna tokenizer GPT-2 via tiktoken."""
+    """Retorna tokenizer correto via tiktoken.
+
+    Usa o tokenizer do vocab_mapping se carregado (ex: o200k_base),
+    senao usa GPT-2 como fallback.
+    """
     import tiktoken
-    return tiktoken.get_encoding("gpt2")
+    name = _VOCAB_TOKENIZER or "gpt2"
+    return tiktoken.get_encoding(name)
 
 
 def tokenize_texts(

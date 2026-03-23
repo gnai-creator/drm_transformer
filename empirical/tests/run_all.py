@@ -10,7 +10,7 @@ sys.path.insert(0, str(_test_dir))
 sys.path.insert(0, str(_figures_dir))
 
 import logging
-from utils import load_results, save_results, RESULTS_PATH, FIGURES_DIR, logger, set_checkpoint, set_output_dir
+from utils import load_results, save_results, RESULTS_PATH, FIGURES_DIR, logger, set_checkpoint, set_output_dir, _load_vocab_mapping
 
 # Importar modulos de teste
 import test_axes_projection
@@ -38,7 +38,14 @@ def main():
         "--output-dir", type=str, default=None,
         help="Diretorio de saida para results.json e figures/ (default: empirical/)",
     )
+    parser.add_argument(
+        "--data-dir", type=str, default=None,
+        help="Diretorio dos dados para carregar vocab_mapping.json",
+    )
     args = parser.parse_args()
+
+    if args.data_dir:
+        _load_vocab_mapping(args.data_dir)
 
     if args.output_dir:
         set_output_dir(args.output_dir)
