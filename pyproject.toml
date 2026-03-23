@@ -38,6 +38,12 @@ data = [
     "datasets",
     "tqdm",
 ]
+eval = [
+    "ripser",
+    "scikit-learn",
+    "scipy",
+    "numpy",
+]
 
 [project.urls]
 Repository = "https://github.com/gnai-creator/drm-transformer"

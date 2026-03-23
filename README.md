@@ -142,6 +142,41 @@ logits, loss = model(input_ids, targets)
 # loss: escalar (cross-entropy)
 ```
 
+### Voronoi Foliation (Avaliacao Topologica)
+
+```bash
+# 1. Extrair vectores DRM
+python scripts/extract_drm_vectors.py \
+    --checkpoint checkpoints/1m/final.pt \
+    --data-dir data/ \
+    --output-dir eval_results/foliation_1m \
+    --max-tokens 100000
+
+# 2. Voronoi Foliation (9 fases: LTSA, Homology, Reeb, ARI, ...)
+python scripts/voronoi_foliation_drm.py \
+    --coords eval_results/foliation_1m/drm_coords.npy \
+    --G-diag eval_results/foliation_1m/drm_G_diag.npy \
+    --gamma eval_results/foliation_1m/drm_gamma.npy \
+    --output-dir eval_results/foliation_1m \
+    --n-seeds 30 \
+    --homology-points 1500
+```
+
+Saidas: `foliation_results.json` com F-score, H1/H2, ARI, coherence, Reeb graph.
+H1 alto num modelo sem treino indica topologia nao-trivial; F > 0.5 = foliation robusta.
+
+### Avaliacao via API Python
+
+```python
+from drm_transformer.evaluation import DRMFoliationEvaluator
+from drm_transformer.training.data import create_dataloader
+
+evaluator = DRMFoliationEvaluator(model, device="cuda")
+loader = create_dataloader("data/", seq_len=1024, batch_size=4)
+results = evaluator.evaluate(loader, max_tokens=100_000)
+print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
+```
+
 ---
 
 ## Scaling Configs
@@ -213,8 +248,14 @@ drm_transformer/
 |       |-- trainer.py         # DRMTrainer: loop de treino completo
 |       +-- data.py            # ShardedDataset + create_dataloader
 |
+|   +-- evaluation/
+|       |-- __init__.py
+|       +-- foliation.py        # DRMFoliationEvaluator (pipeline completo)
+|
 |-- scripts/
-|   +-- train_distributed.py   # Script de lancamento (single/multi GPU)
+|   |-- train_distributed.py    # Script de lancamento (single/multi GPU)
+|   |-- extract_drm_vectors.py  # Extrai coords, G_diag, gamma, mass
+|   +-- voronoi_foliation_drm.py # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
 |-- configs/scaling/           # 9 configs: 1M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
 +-- docs/                      # Documentacao
