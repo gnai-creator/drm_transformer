@@ -271,12 +271,18 @@ def pass2_remap_shards(
     out_shard_idx = 0
     buffer = np.array([], dtype=np.uint16)
 
+    # Lookup table: O(1) por token em vez de O(vocab_size)
+    max_orig_id = max(mapping.keys()) if mapping else 0
+    lut = np.zeros(max_orig_id + 1, dtype=np.uint16)
+    for orig_id, new_id in mapping.items():
+        lut[orig_id] = new_id
+
     for raw_path in tqdm(raw_files, desc="Remapping shards"):
         raw = np.load(raw_path)
-        # Vectorized remap: lookup com default 0 (UNK)
+        # Lookup vectorizado: tokens fora do range mapeiam para 0 (UNK)
+        mask = raw <= max_orig_id
         remapped = np.zeros(len(raw), dtype=np.uint16)
-        for orig_id, new_id in mapping.items():
-            remapped[raw == orig_id] = new_id
+        remapped[mask] = lut[raw[mask]]
 
         buffer = np.concatenate([buffer, remapped])
 

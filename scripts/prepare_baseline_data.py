@@ -234,6 +234,10 @@ def main():
         sys.exit(0 if ok else 1)
     else:
         prepare_baseline()
+        # Force exit para evitar crash no cleanup do datasets/pyarrow
+        # (PyGILState_Release bug em threads de streaming ao finalizar)
+        import os
+        os._exit(0)
 
 
 if __name__ == "__main__":
