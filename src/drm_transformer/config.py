@@ -49,5 +49,6 @@ class DRMTransformerConfig:
 
     gravity_enabled: bool = True
     gravity_strength: float = 0.1
+    gravity_n_rff: int = 64
 
     variable_dim: bool = True

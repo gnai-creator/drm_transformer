@@ -34,7 +34,11 @@ class DRMTransformer(nn.Module):
         self.metric_net = MetricNet(config.d_manifold, config.metric_hidden)
 
         self.gravity_field = (
-            GravityField(config.d_manifold, config.gravity_strength)
+            GravityField(
+                config.d_manifold,
+                config.gravity_strength,
+                n_rff=config.gravity_n_rff,
+            )
             if config.gravity_enabled else None
         )
 
