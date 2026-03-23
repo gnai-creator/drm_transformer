@@ -106,6 +106,8 @@ class DRMTrainer:
         self.save_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir = Path(self.config.get("log_dir", "logs"))
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        self._log_path = self.save_dir / "train.log"
+        self._log_history = []
 
     def _lr_schedule(self, step: int) -> float:
         """Cosine schedule com warmup linear.
@@ -167,6 +169,64 @@ class DRMTrainer:
 
         self.optimizer.zero_grad(set_to_none=True)
         return gn
+
+    @torch.no_grad()
+    def _extract_drm_metrics(self) -> Dict[str, float]:
+        """Extrai metricas DRM para logging.
+
+        Returns:
+            Dict com metric_G_var, metric_G_diag_mean, metric_G_frob,
+            gamma_mean, mass_mean, temperature, diversity_active, etc.
+        """
+        metrics = {}
+        model = self.raw_model
+
+        metric_net = getattr(model, "metric_net", None)
+        if metric_net is None:
+            return metrics
+
+        # Coordenadas de amostra para avaliar G(x)
+        d = metric_net.dim
+        coords = torch.rand(1, 16, d, device=self.device)
+        G = metric_net(coords)  # [1, 16, D, D]
+
+        # G(x) estatisticas
+        metrics["metric_G_var"] = G.var(dim=(0, 1)).mean().item()
+        G_diag = G.diagonal(dim1=-2, dim2=-1)
+        metrics["metric_G_diag_mean"] = G_diag.mean().item()
+        metrics["metric_G_frob"] = G.pow(2).sum(dim=(-2, -1)).sqrt().mean().item()
+
+        # Gamma
+        anchors = getattr(model, "anchors", None)
+        if anchors is not None:
+            from ..manifold import gamma_scale
+            gamma_c = self.config.get("gamma_c", 4.0)
+            gamma = gamma_scale(coords, anchors, c_param=gamma_c)
+            metrics["gamma_mean"] = gamma.mean().item()
+
+        # Mass
+        gravity = getattr(model, "gravity_field", None)
+        if gravity is not None:
+            mass = gravity.compute_mass(coords)
+            metrics["mass_mean"] = mass.mean().item()
+
+        # Temperatures (media dos heads do block 0)
+        if hasattr(model, "blocks") and len(model.blocks) > 0:
+            temp = model.blocks[0].attn.temperature
+            metrics["temperature"] = temp.item()
+
+        # Diversity ativo?
+        warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
+        metrics["diversity_active"] = 1.0 if self.global_step >= warmup_div else 0.0
+
+        # DimGate (se habilitado)
+        dim_gate = getattr(model, "dim_gate", None)
+        if dim_gate is not None:
+            x_sample = torch.randn(1, 4, model.config.d_model, device=self.device)
+            _, dimD = dim_gate(x_sample)
+            metrics["dimD_mean"] = dimD.mean().item()
+
+        return metrics
 
     def _compute_drm_losses(self) -> torch.Tensor:
         """Computa losses DRM (metric regularization + diversity).
@@ -277,19 +337,48 @@ class DRMTrainer:
                 if is_main and self.global_step % log_interval == 0:
                     avg_loss = running_loss / log_interval
                     elapsed = time.time() - t0
-                    tokens_per_sec = (
-                        self.global_step * self.config.get("batch_size", 16)
-                        * self.config.get("max_seq_len", 1024)
-                        * accum / elapsed
-                    )
+                    batch_sz = self.config.get("batch_size", 16)
+                    seq_len = self.config.get("max_seq_len", 1024)
+                    tokens_seen = self.global_step * batch_sz * seq_len * accum
+                    tokens_per_sec = tokens_seen / max(elapsed, 1)
                     current_lr = self.optimizer.param_groups[0]["lr"]
-                    logger.info(
-                        "step=%d | loss=%.4f | lr=%.2e | gn=%.2f | "
-                        "tok/s=%.0f | skip=%d",
-                        self.global_step, avg_loss, current_lr,
-                        gn if gn >= 0 else 0,
-                        tokens_per_sec, skip_grads,
-                    )
+
+                    # Metricas DRM
+                    metrics = self._extract_drm_metrics()
+
+                    # Log line (pipe-separated)
+                    parts = [
+                        f"step={self.global_step}",
+                        f"loss={avg_loss:.4f}",
+                        f"lr={current_lr:.2e}",
+                        f"gn={gn if gn >= 0 else 0:.2f}",
+                        f"tok/s={tokens_per_sec:.0f}",
+                        f"tokens={tokens_seen}",
+                        f"skip={skip_grads}",
+                    ]
+                    for k, v in metrics.items():
+                        parts.append(f"{k}={v:.6f}")
+
+                    log_line = " | ".join(parts)
+                    logger.info(log_line)
+
+                    # Salvar em train.log
+                    with open(self._log_path, "a") as f:
+                        f.write(log_line + "\n")
+
+                    # Historico para JSON
+                    entry = {
+                        "step": self.global_step,
+                        "loss": avg_loss,
+                        "lr": current_lr,
+                        "grad_norm": gn if gn >= 0 else 0,
+                        "tokens_per_sec": tokens_per_sec,
+                        "tokens_seen": tokens_seen,
+                        "skip_grads": skip_grads,
+                    }
+                    entry.update(metrics)
+                    self._log_history.append(entry)
+
                     running_loss = 0.0
 
                 if is_main and self.global_step % save_interval == 0:
@@ -307,6 +396,14 @@ class DRMTrainer:
 
         if is_main:
             self.save_checkpoint(tag="final")
+
+            # Salvar training_log.json
+            import json
+            log_path = self.save_dir / "training_log.json"
+            with open(log_path, "w") as f:
+                json.dump(self._log_history, f, indent=2)
+            logger.info("[LOG] Salvo: %s (%d entries)", log_path, len(self._log_history))
+
             logger.info(
                 "[TRAINER] Concluido: %d steps em %.0fs (%.0f tok/s)",
                 self.global_step, total_time,

@@ -42,3 +42,5 @@ lambda_metric_reg: 0.0001
 lambda_metric_diversity: 0.008
 metric_diversity_warmup_steps: 50000
 save_dir: checkpoints/multilingual_162b
+save_interval: 500
+log_interval: 50
