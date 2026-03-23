@@ -24,6 +24,7 @@ early_stopping_patience: 10
 # --- Manifold DRM ---
 d_manifold: 32
 metric_hidden: 128
+metric_rank: 8
 n_quad: 0
 
 # --- Gamma-Scaling ---
@@ -42,6 +43,7 @@ variable_dim: true
 # --- Losses DRM ---
 lambda_metric_reg: 0.0001
 lambda_metric_diversity: 0.008
+lambda_ortho: 0.01
 metric_diversity_warmup_steps: 50000
 save_dir: checkpoints/162b
 save_interval: 500
