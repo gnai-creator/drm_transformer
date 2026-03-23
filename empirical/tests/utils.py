@@ -109,13 +109,26 @@ def create_model(
             )
 
         model = DRMTransformer(config)
-        model_state = state.get("model_state_dict", state)
+        # Tentar keys comuns: model_state_dict, model, state_dict
+        if "model_state_dict" in state:
+            model_state = state["model_state_dict"]
+        elif "model" in state:
+            model_state = state["model"]
+        elif "state_dict" in state:
+            model_state = state["state_dict"]
+        else:
+            model_state = state
         # Limpar prefixo module. de DDP
         cleaned = {}
         for k, v in model_state.items():
             cleaned[k.removeprefix("module.")] = v
-        model.load_state_dict(cleaned, strict=False)
-        logger.info("[CHECKPOINT] Carregado: %s", ckpt)
+        missing, unexpected = model.load_state_dict(cleaned, strict=False)
+        if missing:
+            logger.warning("[CHECKPOINT] Keys faltando: %s", missing[:5])
+        if unexpected:
+            logger.warning("[CHECKPOINT] Keys inesperadas: %s", unexpected[:5])
+        loaded = len(cleaned) - len(unexpected)
+        logger.info("[CHECKPOINT] Carregado: %s (%d/%d params)", ckpt, loaded, len(cleaned))
     else:
         config = DRMTransformerConfig(
             d_model=64, n_heads=4, n_layers=4, d_ff=128,
