@@ -16,6 +16,7 @@
 - [DRMTransformerConfig](#drmtransformerconfig)
 - [Loss Functions](#loss-functions-regularizacao-geometrica)
 - [Quick Start](#quick-start)
+- [Reprodutibilidade e Ablacoes](#reprodutibilidade-e-ablacoes)
 - [Scaling Configs](#scaling-configs)
 - [Papers](#papers)
 - [Estrutura do Projeto](#estrutura-do-projeto)
@@ -189,7 +190,9 @@ Pesos configurados via `lambda_metric_reg`, `lambda_metric_diversity`, `lambda_o
 ```bash
 git clone https://github.com/gnai-creator/drm_transformer.git
 cd drm_transformer
-pip install -e ".[dev,data,eval]"
+pip install -e ".[all]"             # tudo (dev + data + eval)
+# ou: pip install -e ".[dev,data,eval]"
+# ou reprodutibilidade exata: pip install -r requirements-lock.txt
 ```
 
 ### Preparar Dados
@@ -338,6 +341,49 @@ Saidas:
 
 ---
 
+## Reprodutibilidade e Ablacoes
+
+### Reproducao Completa (um comando)
+
+```bash
+python scripts/repro_baseline.py
+```
+
+Gera dataset baseline, treina, roda ablacoes e consolida KPIs automaticamente.
+Ver [repro.md](repro.md) para guia detalhado e [MODEL_CARD.md](MODEL_CARD.md) para model card.
+
+### Baseline Canonico
+
+```bash
+python scripts/prepare_baseline_data.py                    # Dataset Wikipedia EN 10M tokens
+python scripts/prepare_baseline_data.py --verify           # Verificar SHA256
+python scripts/train_distributed.py \
+    --config configs/baselines/small_1m.yaml \
+    --seed 42 --deterministic                              # Treinar ~1M params
+```
+
+### Ablacoes
+
+```bash
+python scripts/run_ablations.py --seed 42 --deterministic  # 4 variantes
+python scripts/eval_standard.py --all-ablations            # Perplexity comparativa
+```
+
+| Variante | Gravity | Gamma | VarDim |
+|----------|---------|-------|--------|
+| full | Y | Y | Y |
+| no_gravity | N | Y | Y |
+| no_gamma | Y | N | Y |
+| no_variable_dim | Y | Y | N |
+
+### Smoke Tests
+
+```bash
+pytest tests/test_smoke.py -v   # 8 testes (~5s)
+```
+
+---
+
 ## Scaling Configs
 
 | Config | Params | d_model | Layers | Heads | d_manifold | Context |
@@ -381,16 +427,18 @@ Baseado em tres papers de Felipe Maya Muniz:
 drm_transformer/
 |-- README.md
 |-- ARCHITECTURE.md
+|-- MODEL_CARD.md              # Model card tecnico
+|-- ROADMAP.md
+|-- PRIOR_ART.md               # Arte anterior
+|-- repro.md                   # Guia de reprodutibilidade
 |-- LICENSE                    # AGPL-3.0
 |-- LICENSE-COMMERCIAL.md      # Licenca comercial
 |-- CLA.md                     # Contributor License Agreement
-|-- PRIOR_ART.md               # Arte anterior
-|-- ROADMAP.md
 |-- SECURITY.md
 |-- COPYRIGHT
 |-- CITATION.cff
 |-- pyproject.toml
-|-- .gitignore
+|-- requirements-lock.txt      # Lock de dependencias para reprodutibilidade
 |
 |-- src/drm_transformer/
 |   |-- __init__.py            # Exports: DRMTransformerConfig, DRMTransformer
@@ -404,35 +452,44 @@ drm_transformer/
 |   |-- layers.py              # RMSNorm, FeedForward (SwiGLU), DRMTransformerBlock
 |   |-- losses.py              # 5 losses: metric_reg, diversity, orthogonality, axis_var, anchor_align
 |   |
-|   +-- training/
-|       |-- __init__.py
-|       |-- distributed.py     # DDP, FSDP, mixed precision, grad checkpoint
-|       |-- trainer.py         # DRMTrainer: loop de treino completo
-|       +-- data.py            # ShardedDataset + create_dataloader
-|
+|   |-- training/
+|   |   |-- __init__.py
+|   |   |-- distributed.py     # DDP, FSDP, mixed precision, grad checkpoint
+|   |   |-- trainer.py         # DRMTrainer: loop de treino + early stop + metrics.json
+|   |   |-- data.py            # ShardedDataset + create_dataloader
+|   |   +-- reproducibility.py # set_seed, set_deterministic, build_run_manifest
+|   |
 |   +-- evaluation/
 |       |-- __init__.py
-|       +-- foliation.py        # DRMFoliationEvaluator (pipeline completo)
+|       +-- foliation.py       # DRMFoliationEvaluator (pipeline completo)
 |
 |-- scripts/
-|   |-- train_distributed.py        # Script de lancamento (single/multi GPU)
-|   |-- prepare_multilingual_data.py # Download Wikipedia + tokenize o200k_base + remap
+|   |-- train_distributed.py        # Lancamento treino (single/multi GPU, --seed, --deterministic)
+|   |-- prepare_multilingual_data.py # Download CulturaX/Wikipedia + tokenize + remap (streaming)
+|   |-- prepare_baseline_data.py     # Dataset baseline fixo (Wikipedia EN 10M tokens, SHA256)
+|   |-- repro_baseline.py           # Reproducao completa em um comando + KPI dashboard
+|   |-- run_ablations.py            # Roda 4 ablacoes e gera results_ablations.md
+|   |-- eval_standard.py            # Avaliacao padronizada (perplexity)
 |   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
 |   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
-|-- configs/scaling/multilingual/            # 12 configs: 1M, 5M, 10M, 15M, 50M, 125M, 350M, 1.3B, 13B, 70B, 162B, 640B
-|   +-- multilingual/          # Mesmas configs com vocab_size=50000 (o200k_base subset)
+|-- configs/
+|   |-- scaling/multilingual/  # 12 configs: 1M a 640B params
+|   |-- baselines/             # Baseline canonico (small_1m.yaml)
+|   +-- ablations/             # 4 ablacoes (full, no_gravity, no_gamma, no_variable_dim)
 |
-|-- eval-results/              # Resultados de foliation e avaliacao
+|-- tests/
+|   +-- test_smoke.py          # 8 smoke tests (import, forward, config, seed)
 |
 |-- empirical/                 # Validacao empirica dos eixos semanticos
 |   |-- results.json           # Resultados consolidados
-|   |-- figures/               # Plots: PCA, t-SNE, axis heatmap, separation
-|   +-- tests/                 # 4 testes: axes_projection, axis_stats, semantic_separation, geometry_correlation
+|   |-- figures/               # Plots: PCA, t-SNE, axis heatmap, separation, calibration
+|   +-- tests/                 # 5 testes: axes_projection, axis_stats, calibration, semantic_separation, geometry_correlation
 |
 |-- docs/
 |   |-- process/               # Documentacao de cada mudanca (numerada + datada)
-+   +-- scaling/runpod/        # Guia de scaling para RunPod
+|   |-- future/                # Features planejadas (benchmarks, release tag)
+|   +-- scaling/runpod/        # Guia de scaling para RunPod
 ```
 
 ---
