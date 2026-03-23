@@ -18,17 +18,36 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 
 ---
 
+## Transformer Padrao vs DRM Transformer
+
+| Componente | Transformer Padrao | DRM Transformer | Analogia |
+|---|---|---|---|
+| **Espaco de embeddings** | R^d plano, Euclidiano | Manifold curvo com metrica G(x) | Mapa plano vs superficie da Terra: distancias reais dependem do terreno |
+| **Attention score** | dot-product: q^T k | Distancia geodesica: -d_G(q,k)/temp | Medir "proximidade" em linha recta vs seguir o caminho real pelo terreno |
+| **Metrica** | Fixa (identidade implicita) | Aprendida por posicao: G(x) = L(x) L(x)^T | Regua rigida vs regua elastica que estica conforme o lugar |
+| **Tokens de alta informacao** | Tratados igual a todos os outros | Deformam a metrica local (gravidade) | Estrela que curva o espaco-tempo a sua volta, atraindo o que esta perto |
+| **Dimensionalidade** | Fixa: todos os tokens usam d dimensoes | Variavel: dimD(p) por token via gate suave | Sala de d portas onde tokens simples abrem 3 e tokens complexos abrem todas |
+| **Escala de resolucao** | Uniforme em todo o espaco | Gamma-scaling: regioes distantes dos anchors recebem mais resolucao | Microscopio que amplia automaticamente as zonas menos exploradas |
+| **Posicao** | RoPE sobre embeddings | RoPE + coordenadas no manifold [0,1]^d via sigmoid | Endereco na rua (RoPE) + coordenadas GPS no mapa (manifold) |
+
+**Em resumo:** um Transformer padrao opera num espaco plano e rigido.
+O DRM Transformer opera num espaco que se curva, estica e adapta
+conforme o que esta a processar -- como a diferenca entre navegar
+num mapa plano e navegar na superficie real de um planeta.
+
+---
+
 ## Inovacoes Principais
 
-1. **Geodesic Attention** - Distancia geodesica sob G(x) substitui dot-product
+1. **Geodesic Attention** -- Distancia geodesica sob G(x) substitui dot-product
    Euclidiano. Tokens proximos no manifold recebem mais atencao.
-2. **MetricNet** - Tensor metrico G(x) aprendido via MLP + Cholesky (SPD
+2. **MetricNet** -- Tensor metrico G(x) aprendido via MLP + Cholesky (SPD
    garantido). A geometria do espaco de embeddings e aprendida end-to-end.
-3. **Gravitational Token Embedding** - Cada token possui massa aprendida que
+3. **Gravitational Token Embedding** -- Cada token possui massa aprendida que
    deforma G(x) na vizinhanca, atraindo tokens vizinhos (analogia com gravidade).
-4. **DimensionalGate** - Dimensionalidade efetiva dimD(p) varia por token via
+4. **DimensionalGate** -- Dimensionalidade efetiva dimD(p) varia por token via
    mascara suave. Tokens simples usam poucas dimensoes, tokens complexos usam mais.
-5. **Gamma-Scaling (Relativistic Dynamics)** - Fator de Lorentz gamma escala
+5. **Gamma-Scaling (Relativistic Dynamics)** -- Fator de Lorentz gamma escala
    adaptativamente a resolucao metrica conforme a distancia aos anchors no manifold.
 
 ---
