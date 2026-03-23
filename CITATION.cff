@@ -13,10 +13,17 @@ authors:
   - family-names: "Muniz"
     given-names: "Felipe Maya"
     email: "felipe@truthagi.ai"
+contributors:
+  - name: "Claude Opus 4.6 (1M context)"
+    affiliation: "Anthropic"
+    note: "AI-assisted implementation"
+  - name: "Felipe Maya Muniz"
+    affiliation: "Truth AGI"
+    note: "Original author, main developer, and maintainer"
 version: "0.1.0"
 date-released: "2026-03-22"
 license: "AGPL-3.0-or-later"
-repository-code: "https://github.com/gnai-creator/drm-transformer"
+repository-code: "https://github.com/gnai-creator/drm_transformer"
 keywords:
   - drm
   - geodesic-attention

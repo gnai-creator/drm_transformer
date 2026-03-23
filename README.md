@@ -6,7 +6,7 @@
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org)
 [![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/)
 [![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
-[![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#referencias)
+[![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
 
 Decoder-only Transformer onde o espaco de embeddings vive num Directional
 Relational Manifold (DRM) com tensor metrico aprendido G(x) dependente de
@@ -29,7 +29,7 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 4. **DimensionalGate** - Dimensionalidade efetiva dimD(p) varia por token via
    mascara suave. Tokens simples usam poucas dimensoes, tokens complexos usam mais.
 5. **Gamma-Scaling (Relativistic Dynamics)** - Fator de Lorentz gamma escala
-   adaptativamente a resolucao da atencao conforme a "velocidade" no manifold.
+   adaptativamente a resolucao metrica conforme a distancia aos anchors no manifold.
 
 ---
 
@@ -40,31 +40,41 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
       |
       v
  +------------------+
- |   Embed (token)  |
+ |  Token Embedding  |
  +------------------+
       |
       v
  +------------------+
- | DimensionalGate  |  --> dimD(p) por token
+ | DimensionalGate  |  --> dimD(p) por token (mascara suave)
  +------------------+
       |
       v
  +==========================================+
- |  DRM Block x N                           |
+ |  DRM Block x N (Pre-RMSNorm + Residual) |
  |                                          |
- |  DRM Attention:                          |
- |    G(x) <- MetricNet(hidden)             |
- |    gravity <- GravityField(mass, G)      |
- |    dist <- geodesic_dist(Q, K, G)        |
- |    gamma <- lorentz_factor(dist)         |
- |    attn = softmax(-dist * gamma) @ V     |
+ |  1. Projetar Q, K para manifold [0,1]^d |
+ |     q_m = sigmoid(W_q @ q_head)         |
+ |     k_m = sigmoid(W_k @ k_head)         |
  |                                          |
- |  FFN (GELU/SwiGLU) + Residual           |
+ |  2. G(x) = MetricNet(q_m)  [SPD, Chol.] |
+ |     G_grav = GravityField(G, mass, q_m)  |
+ |                                          |
+ |  3. d^2 = (q_m - k_m)^T G_grav (q_m-k_m)|
+ |     d^2 *= gamma^2 (se gamma_enabled)   |
+ |                                          |
+ |  4. attn = softmax(-d^2 / temp) @ V     |
+ |                                          |
+ |  5. FFN (SwiGLU) + Residual             |
  +==========================================+
       |
       v
  +------------------+
- |     LM Head      |
+ |   RMSNorm final  |
+ +------------------+
+      |
+      v
+ +------------------+
+ |     LM Head      |  (weight-tied com Token Embedding)
  +------------------+
       |
       v
@@ -78,39 +88,75 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 ### Instalacao
 
 ```bash
-git clone https://github.com/gnai-creator/drm-transformer.git
-cd drm-transformer
-pip install -e ".[dev]"
+git clone https://github.com/gnai-creator/drm_transformer.git
+cd drm_transformer
+pip install -e ".[dev,data]"
 ```
 
 ### Treinamento
 
 ```bash
 # Single GPU
-python scripts/train.py \
-    --config configs/350m.yaml \
-    --data-dir data/fineweb
+python scripts/train_distributed.py \
+    --config configs/scaling/15m.yaml \
+    --data-dir data/
 
 # Multi-GPU (DDP)
-torchrun --nproc_per_node=4 scripts/train.py \
-    --config configs/350m.yaml \
-    --data-dir data/fineweb
+torchrun --nproc_per_node=4 scripts/train_distributed.py \
+    --config configs/scaling/350m.yaml \
+    --data-dir data/
+
+# FSDP (13B+)
+torchrun --nproc_per_node=8 scripts/train_distributed.py \
+    --config configs/scaling/13b.yaml \
+    --data-dir data/
+
+# Resume
+python scripts/train_distributed.py \
+    --config configs/scaling/350m.yaml \
+    --resume auto
 ```
 
 ### Geracao
 
 ```python
 import torch
-from drm_transformer import DRMTransformerConfig, DRMTransformerModel
+from drm_transformer import DRMTransformerConfig, DRMTransformer
 
-config = DRMTransformerConfig()
-model = DRMTransformerModel(config)
+config = DRMTransformerConfig(d_model=256, n_layers=4, n_heads=4, d_manifold=8)
+model = DRMTransformer(config)
 
-input_ids = torch.randint(0, config.vocab_size, (1, 128))
-output = model(input_ids)
-
-logits = output.logits  # [1, 128, 50257]
+prompt = torch.randint(0, config.vocab_size, (1, 10))
+generated = model.generate(prompt, max_new_tokens=50, temperature=0.8, top_k=50)
+print(generated.shape)  # [1, 60]
 ```
+
+### Forward pass
+
+```python
+input_ids = torch.randint(0, config.vocab_size, (2, 128))
+targets = torch.randint(0, config.vocab_size, (2, 128))
+
+logits, loss = model(input_ids, targets)
+# logits: [2, 128, 50257]
+# loss: escalar (cross-entropy)
+```
+
+---
+
+## Scaling Configs
+
+| Config | Params | d_model | Layers | Heads | d_manifold | Context |
+|--------|--------|---------|--------|-------|------------|---------|
+| [1m](configs/scaling/1m.yaml) | ~1M | 64 | 4 | 2 | 4 | 256 |
+| [15m](configs/scaling/15m.yaml) | ~15M | 256 | 6 | 4 | 8 | 512 |
+| [50m](configs/scaling/50m.yaml) | ~50M | 512 | 8 | 8 | 12 | 1024 |
+| [350m](configs/scaling/350m.yaml) | ~350M | 1024 | 24 | 16 | 16 | 1024 |
+| [1.3b](configs/scaling/1.3b.yaml) | ~1.3B | 2048 | 24 | 16 | 20 | 2048 |
+| [13b](configs/scaling/13b.yaml) | ~13B | 5120 | 40 | 40 | 24 | 4096 |
+| [70b](configs/scaling/70b.yaml) | ~70B | 8192 | 80 | 64 | 28 | 4096 |
+| [162b](configs/scaling/162b.yaml) | ~162B | 12288 | 96 | 96 | 32 | 4096 |
+| [640b](configs/scaling/640b.yaml) | ~640B | 16384 | 126 | 128 | 40 | 8192 |
 
 ---
 
@@ -118,80 +164,60 @@ logits = output.logits  # [1, 128, 50257]
 
 Baseado em tres papers de Felipe Maya Muniz:
 
-1. **DRM V1.1** - Directional Relational Manifolds: geometria com
-   dimensionalidade variavel e tensor metrico aprendido
-2. **Geometry of Consciousness V1.2** - Geometria de campos conscientes
-   no manifold DRM
-3. **DRM Relativistic Dynamics** - Dinamica relativistica com fator
-   de Lorentz e campo gravitacional de tokens
+1. **DRM: Directional Relational Manifolds** - Geometria com dimensionalidade
+   variavel, metrica relacional, convergencia toroidal.
+   [DOI: 10.5281/zenodo.19058837](https://doi.org/10.5281/zenodo.19058837)
+
+2. **The Geometry of Consciousness** - Dimensionalidade domina performance
+   cognitiva (r=0.920). Ceiling theorem: O(S) <= d. Interacao d x CC.
+   [DOI: 10.5281/zenodo.19059445](https://doi.org/10.5281/zenodo.19059445)
+
+3. **DRM Relativistic Dynamics** - Fator de Lorentz como parametro de
+   controle, bifurcation cascade, convergencia toroidal sob recorrencia.
+   [DOI: 10.5281/zenodo.19140125](https://doi.org/10.5281/zenodo.19140125)
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-drm-transformer/
-|-- LICENSE                     # AGPL-3.0 (texto completo)
-|-- LICENSE-COMMERCIAL.md       # Termos da licenca comercial
-|-- CLA.md                      # Contributor License Agreement
-|-- ARCHITECTURE.md             # Arquitetura detalhada
-|-- PRIOR_ART.md                # Arte anterior e trabalhos relacionados
-|-- ROADMAP.md                  # Plano de desenvolvimento
-|-- README.md                   # Este arquivo
+drm_transformer/
+|-- README.md
+|-- ARCHITECTURE.md
+|-- LICENSE                    # AGPL-3.0
+|-- LICENSE-COMMERCIAL.md      # Licenca comercial
+|-- CLA.md                     # Contributor License Agreement
+|-- PRIOR_ART.md               # Arte anterior
+|-- ROADMAP.md
+|-- SECURITY.md
+|-- COPYRIGHT
+|-- CITATION.cff
+|-- pyproject.toml
+|-- .gitignore
 |
 |-- src/drm_transformer/
-|   |-- __init__.py
-|   |-- config.py               # DRMTransformerConfig
+|   |-- __init__.py            # Exports: DRMTransformerConfig, DRMTransformer
+|   |-- config.py              # DRMTransformerConfig (dataclass)
+|   |-- model.py               # DRMTransformer (modelo principal)
+|   |-- attention.py           # DRMAttention + RotaryEmbedding + apply_rope
+|   |-- metric_net.py          # MetricNet: G(x) via MLP + Cholesky (SPD)
+|   |-- manifold.py            # ManifoldProjection + gamma_scale
+|   |-- gravity.py             # GravityField: massa + deformacao metrica
+|   |-- dimensional_gate.py    # DimensionalGate: dimD(p) variavel
+|   |-- layers.py              # RMSNorm, FeedForward (SwiGLU), DRMTransformerBlock
+|   |-- losses.py              # metric_regularization + metric_diversity_loss
 |   |
-|   |-- model/                  # Nucleo do modelo
-|   |   |-- model.py            # DRMTransformerModel (forward principal)
-|   |   |-- embeddings.py       # TokenEmbedding
-|   |   +-- output.py           # ModelOutput dataclass
-|   |
-|   |-- attention/              # DRM Attention
-|   |   |-- geodesic_attention.py # GeodesicAttention
-|   |   +-- gamma_scaling.py    # Lorentz gamma-factor
-|   |
-|   |-- metric_net/             # Tensor metrico aprendido
-|   |   |-- metric_net.py       # MetricNet: G(x) via MLP + Cholesky
-|   |   +-- cholesky_param.py   # Parametrizacao SPD
-|   |
-|   |-- manifold/               # Operacoes no manifold
-|   |   |-- geodesic_distance.py # Distancia geodesica
-|   |   |-- christoffel.py      # Simbolos de Christoffel
-|   |   +-- curvature.py        # Curvatura de Ricci
-|   |
-|   |-- gravity/                # Campo gravitacional
-|   |   |-- gravity_field.py    # GravityField
-|   |   +-- token_mass.py       # Massa por token
-|   |
-|   |-- dimensional_gate/       # Dimensionalidade variavel
-|   |   |-- dimensional_gate.py # DimensionalGate: dimD(p)
-|   |   +-- soft_mask.py        # Mascara suave
-|   |
-|   |-- layers/                 # Blocos do transformer
-|   |   |-- drm_block.py        # DRMBlock
-|   |   |-- feed_forward.py     # FFN (GELU/SwiGLU)
-|   |   +-- lm_head.py          # Language model head
-|   |
-|   |-- losses/                 # Funcoes de perda
-|   |   |-- composite_loss.py   # CE + metric_reg + metric_diversity
-|   |   |-- metric_regularization.py
-|   |   +-- metric_diversity.py
-|   |
-|   |-- training/               # Pipeline de treinamento
-|   |   |-- trainer.py
-|   |   |-- data.py
-|   |   +-- scheduler.py
-|   |
-|   +-- inference/              # Geracao
-|       +-- generator.py
+|   +-- training/
+|       |-- __init__.py
+|       |-- distributed.py     # DDP, FSDP, mixed precision, grad checkpoint
+|       |-- trainer.py         # DRMTrainer: loop de treino completo
+|       +-- data.py            # ShardedDataset + create_dataloader
 |
-|-- tests/                      # Testes unitarios
-|-- configs/                    # Configs YAML por escala
-|-- scripts/                    # Scripts de treinamento e avaliacao
-|-- checkpoints/                # Checkpoints de modelos
-+-- docs/process/               # Documentacao de processos
+|-- scripts/
+|   +-- train_distributed.py   # Script de lancamento (single/multi GPU)
+|
+|-- configs/scaling/           # 9 configs: 1M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
++-- docs/                      # Documentacao
 ```
 
 ---
@@ -229,11 +255,11 @@ viabilidade do licenciamento dual.
   author = {Muniz, Felipe Maya},
   title = {DRM Transformer: Decoder-only Transformer with Directional Relational Manifold Geometry},
   year = {2026},
-  url = {https://github.com/gnai-creator/drm-transformer},
+  url = {https://github.com/gnai-creator/drm_transformer},
   license = {AGPL-3.0-or-later}
 }
 ```
 
 ---
 
-Copyright (C) 2026 Felipe Maya Muniz
+Copyright (C) 2026 Felipe Maya Muniz. All rights reserved.
