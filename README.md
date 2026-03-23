@@ -50,21 +50,21 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
       |
       v
  +==========================================+
- |  DRM Block x N (Pre-RMSNorm + Residual) |
+ |  DRM Block x N (Pre-RMSNorm + Residual)  |
  |                                          |
- |  1. Projetar Q, K para manifold [0,1]^d |
- |     q_m = sigmoid(W_q @ q_head)         |
- |     k_m = sigmoid(W_k @ k_head)         |
+ |  1. Projetar Q, K para manifold [0,1]^d  |
+ |     q_m = sigmoid(W_q @ q_head)          |
+ |     k_m = sigmoid(W_k @ k_head)          |
  |                                          |
- |  2. G(x) = MetricNet(q_m)  [SPD, Chol.] |
+ |  2. G(x) = MetricNet(q_m)  [SPD, Chol.]  |
  |     G_grav = GravityField(G, mass, q_m)  |
  |                                          |
- |  3. d^2 = (q_m - k_m)^T G_grav (q_m-k_m)|
- |     d^2 *= gamma^2 (se gamma_enabled)   |
+ |  3. d^2 = (q_m - k_m)^T G_grav (q_m-k_m) |
+ |     d^2 *= gamma^2 (se gamma_enabled)    |
  |                                          |
- |  4. attn = softmax(-d^2 / temp) @ V     |
+ |  4. attn = softmax(-d^2 / temp) @ V      |
  |                                          |
- |  5. FFN (SwiGLU) + Residual             |
+ |  5. FFN (SwiGLU) + Residual              |
  +==========================================+
       |
       v
