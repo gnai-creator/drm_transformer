@@ -90,7 +90,25 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 ```bash
 git clone https://github.com/gnai-creator/drm_transformer.git
 cd drm_transformer
-pip install -e ".[dev,data]"
+pip install -e ".[dev,data,eval]"
+```
+
+### Preparar Dados
+
+```bash
+# Monolingual (English Wikipedia, GPT-2 tokenizer)
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/en \
+    --max-tokens 10000000 \
+    --vocab-size 50257 \
+    --langs en
+
+# Multilingual (Wikipedia 5 linguas, o200k_base subset 50K)
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual \
+    --max-tokens 50000000 \
+    --vocab-size 50000 \
+    --langs en,pt,es,fr,de
 ```
 
 ### Treinamento
