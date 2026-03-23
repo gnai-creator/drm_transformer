@@ -1,0 +1,49 @@
+# ~125M params - Bridge 50M -> 350M [multilingual o200k_base 50K]
+vocab_size: 50000
+d_model: 768
+n_heads: 12
+n_layers: 12
+d_ff: 3072
+max_seq_len: 1024
+dropout: 0.1
+bias: false
+batch_size: 16
+learning_rate: 0.0004
+warmup_steps: 1500
+total_tokens: 3_500_000_000
+mixed_precision: bf16
+gradient_accumulation_steps: 8
+gradient_checkpointing: false
+eval_interval: 500
+early_stopping_patience: 10
+
+# --- Manifold DRM ---
+d_manifold: 14
+metric_hidden: 56
+metric_rank: 4
+n_quad: 0
+
+# --- Gamma-Scaling ---
+gamma_enabled: true
+gamma_c: 3.70
+
+# --- Gravidade ---
+gravity_enabled: true
+gravity_strength: 0.06
+gravity_n_rff: 64
+n_anchors: 6
+
+# --- Dimensionalidade variavel ---
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.001
+lambda_metric_diversity: 0.05
+lambda_ortho: 0.01
+metric_diversity_warmup_steps: 5300
+save_dir: checkpoints/multilingual_125m/run_1
+save_interval: 500
+log_interval: 50
+target_metric_var: 0.001
+save_total_limit: 5
+temperature_min: 0.5
