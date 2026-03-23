@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 from utils import (
     set_seed, create_model, tokenize_texts, get_all_texts_and_labels,
-    save_results, logger,
+    load_eval_batches, save_results, logger,
 )
 
 
@@ -76,24 +76,45 @@ def _compute_calibration(
 
 @torch.no_grad()
 def run(seed: int = 42) -> dict:
-    """Executa avaliacao de calibracao."""
+    """Executa avaliacao de calibracao.
+
+    Usa eval shard (in-distribution) se disponivel, senao usa
+    dataset sintetico (OOD — PPL sera mais alta).
+    """
     set_seed(seed)
     model, config = create_model()
     device = next(model.parameters()).device
 
-    texts, labels = get_all_texts_and_labels()
-    input_ids = tokenize_texts(texts, vocab_size=config.vocab_size).to(device)
+    # Tentar shard de eval (in-distribution)
+    eval_data = load_eval_batches(seq_len=config.max_seq_len)
+    if eval_data is not None:
+        input_ids = eval_data.to(device)
+        logger.info("[CALIBRATION] Usando eval shard (%d seqs, in-distribution)", input_ids.shape[0])
+    else:
+        texts, _ = get_all_texts_and_labels()
+        input_ids = tokenize_texts(texts, vocab_size=config.vocab_size).to(device)
+        logger.info("[CALIBRATION] Usando dataset sintetico (OOD)")
 
     # Forward: input[:-1] -> target[1:]
     src = input_ids[:, :-1]
     tgt = input_ids[:, 1:]
 
-    logits, _ = model(src)  # [B, T, V]
+    all_logits, all_targets = [], []
+    batch_size = 8
+    for i in range(0, src.shape[0], batch_size):
+        batch_src = src[i:i + batch_size]
+        batch_tgt = tgt[i:i + batch_size]
+        logits, _ = model(batch_src)
+        all_logits.append(logits.cpu())
+        all_targets.append(batch_tgt.cpu())
+
+    logits = torch.cat(all_logits, dim=0)
+    targets = torch.cat(all_targets, dim=0)
 
     # Flatten
     B, T, V = logits.shape
     logits_flat = logits.reshape(B * T, V)
-    targets_flat = tgt.reshape(B * T)
+    targets_flat = targets.reshape(B * T)
 
     # Filtrar padding (token 0)
     mask = targets_flat > 0

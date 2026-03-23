@@ -32,6 +32,14 @@ _CHECKPOINT_PATH: Optional[str] = None
 _VOCAB_MAPPING: Optional[Dict[str, int]] = None
 # Tokenizer usado pelo mapping (gpt2 ou o200k_base)
 _VOCAB_TOKENIZER: Optional[str] = None
+# Shard de eval para calibracao in-distribution
+_EVAL_SHARD_PATH: Optional[str] = None
+
+
+def set_eval_shard(path: str) -> None:
+    """Define shard de eval para calibracao in-distribution."""
+    global _EVAL_SHARD_PATH
+    _EVAL_SHARD_PATH = path
 
 
 def set_checkpoint(path: Optional[str]) -> None:
@@ -222,6 +230,41 @@ def tokenize_texts(
         ids = ids + [0] * (max_len - len(ids))
         all_ids.append(ids)
     return torch.tensor(all_ids, dtype=torch.long)
+
+
+def load_eval_batches(
+    seq_len: int = 256,
+    max_tokens: int = 50_000,
+) -> Optional[torch.Tensor]:
+    """Carrega batches do eval shard para calibracao in-distribution.
+
+    Args:
+        seq_len: Comprimento de cada sequencia.
+        max_tokens: Maximo de tokens a usar do shard.
+
+    Returns:
+        Tensor [N, seq_len] de token IDs, ou None se nao ha shard.
+    """
+    if _EVAL_SHARD_PATH is None:
+        return None
+    path = Path(_EVAL_SHARD_PATH)
+    if not path.exists():
+        path = _ROOT / _EVAL_SHARD_PATH
+    if not path.exists():
+        logger.warning("[EVAL SHARD] Nao encontrado: %s", _EVAL_SHARD_PATH)
+        return None
+
+    tokens = np.load(str(path)).astype(np.int64)
+    n_tokens = min(len(tokens), max_tokens)
+    tokens = tokens[:n_tokens]
+
+    # Cortar em sequencias de seq_len
+    n_seqs = n_tokens // seq_len
+    if n_seqs == 0:
+        return None
+    tokens = tokens[:n_seqs * seq_len].reshape(n_seqs, seq_len)
+    logger.info("[EVAL SHARD] %d seqs x %d tokens de %s", n_seqs, seq_len, path)
+    return torch.tensor(tokens, dtype=torch.long)
 
 
 @torch.no_grad()

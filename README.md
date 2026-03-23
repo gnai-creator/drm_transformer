@@ -303,9 +303,10 @@ python empirical/tests/run_all.py
 # Com checkpoint treinado (avalia modelo real)
 python empirical/tests/run_all.py --checkpoint checkpoints/1m/final.pt
 
-# Saida em diretorio customizado
+# Calibracao in-distribution (eval shard do mesmo dominio do treino)
 python empirical/tests/run_all.py \
     --checkpoint checkpoints/multilingual_1m/run_1/final.pt \
+    --eval-shard data/multilingual/shard_00001.npy \
     --output-dir eval_results/empirical_1m
 ```
 

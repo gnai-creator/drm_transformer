@@ -10,7 +10,7 @@ sys.path.insert(0, str(_test_dir))
 sys.path.insert(0, str(_figures_dir))
 
 import logging
-from utils import load_results, save_results, RESULTS_PATH, FIGURES_DIR, logger, set_checkpoint, set_output_dir, _load_vocab_mapping
+from utils import load_results, save_results, RESULTS_PATH, FIGURES_DIR, logger, set_checkpoint, set_output_dir, _load_vocab_mapping, set_eval_shard
 
 # Importar modulos de teste
 import test_axes_projection
@@ -42,10 +42,17 @@ def main():
         "--data-dir", type=str, default=None,
         help="Diretorio dos dados para carregar vocab_mapping.json",
     )
+    parser.add_argument(
+        "--eval-shard", type=str, default=None,
+        help="Shard .npy de eval para calibracao in-distribution",
+    )
     args = parser.parse_args()
 
     if args.data_dir:
         _load_vocab_mapping(args.data_dir)
+    if args.eval_shard:
+        set_eval_shard(args.eval_shard)
+        logger.info("[EVAL SHARD] %s", args.eval_shard)
 
     if args.output_dir:
         set_output_dir(args.output_dir)
