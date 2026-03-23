@@ -4,7 +4,7 @@
 [![Commercial License](https://img.shields.io/badge/License-Commercial-orange.svg)](LICENSE-COMMERCIAL.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab.svg)](https://python.org)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org)
-[![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/)
+[![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/multilingual/)
 [![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
 [![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
 
@@ -237,22 +237,22 @@ python scripts/prepare_multilingual_data.py \
 ```bash
 # Single GPU
 python scripts/train_distributed.py \
-    --config configs/scaling/15m.yaml \
+    --config configs/scaling/multilingual/15m.yaml \
     --data-dir data/
 
 # Multi-GPU (DDP)
 torchrun --nproc_per_node=4 scripts/train_distributed.py \
-    --config configs/scaling/350m.yaml \
+    --config configs/scaling/multilingual/350m.yaml \
     --data-dir data/
 
 # FSDP (13B+)
 torchrun --nproc_per_node=8 scripts/train_distributed.py \
-    --config configs/scaling/13b.yaml \
+    --config configs/scaling/multilingual/13b.yaml \
     --data-dir data/
 
 # Resume
 python scripts/train_distributed.py \
-    --config configs/scaling/350m.yaml \
+    --config configs/scaling/multilingual/350m.yaml \
     --resume auto
 ```
 
@@ -342,17 +342,18 @@ Saidas:
 
 | Config | Params | d_model | Layers | Heads | d_manifold | Context |
 |--------|--------|---------|--------|-------|------------|---------|
-| [1m](configs/scaling/1m.yaml) | ~1M | 64 | 4 | 2 | 4 | 256 |
-| [5m](configs/scaling/5m.yaml) | ~5M | 96 | 6 | 3 | 4 | 512 |
-| [10m](configs/scaling/10m.yaml) | ~10M | 160 | 4 | 4 | 6 | 512 |
-| [15m](configs/scaling/15m.yaml) | ~15M | 256 | 6 | 4 | 8 | 512 |
-| [50m](configs/scaling/50m.yaml) | ~50M | 512 | 8 | 8 | 12 | 1024 |
-| [350m](configs/scaling/350m.yaml) | ~350M | 1024 | 24 | 16 | 16 | 1024 |
-| [1.3b](configs/scaling/1.3b.yaml) | ~1.3B | 2048 | 24 | 16 | 20 | 2048 |
-| [13b](configs/scaling/13b.yaml) | ~13B | 5120 | 40 | 40 | 24 | 4096 |
-| [70b](configs/scaling/70b.yaml) | ~70B | 8192 | 80 | 64 | 28 | 4096 |
-| [162b](configs/scaling/162b.yaml) | ~162B | 12288 | 96 | 96 | 32 | 4096 |
-| [640b](configs/scaling/640b.yaml) | ~640B | 16384 | 126 | 128 | 40 | 8192 |
+| [1m](configs/scaling/multilingual/1m.yaml) | ~1M | 64 | 4 | 2 | 4 | 256 |
+| [5m](configs/scaling/multilingual/5m.yaml) | ~5M | 96 | 6 | 3 | 4 | 512 |
+| [10m](configs/scaling/multilingual/10m.yaml) | ~10M | 160 | 4 | 4 | 6 | 512 |
+| [15m](configs/scaling/multilingual/15m.yaml) | ~15M | 256 | 6 | 4 | 8 | 512 |
+| [50m](configs/scaling/multilingual/50m.yaml) | ~50M | 512 | 8 | 8 | 12 | 1024 |
+| [125m](configs/scaling/multilingual/125m.yaml) | ~125M | 768 | 12 | 12 | 14 | 1024 |
+| [350m](configs/scaling/multilingual/350m.yaml) | ~350M | 1024 | 24 | 16 | 16 | 1024 |
+| [1.3b](configs/scaling/multilingual/1.3b.yaml) | ~1.3B | 2048 | 24 | 16 | 20 | 2048 |
+| [13b](configs/scaling/multilingual/13b.yaml) | ~13B | 5120 | 40 | 40 | 24 | 4096 |
+| [70b](configs/scaling/multilingual/70b.yaml) | ~70B | 8192 | 80 | 64 | 28 | 4096 |
+| [162b](configs/scaling/multilingual/162b.yaml) | ~162B | 12288 | 96 | 96 | 32 | 4096 |
+| [640b](configs/scaling/multilingual/640b.yaml) | ~640B | 16384 | 126 | 128 | 40 | 8192 |
 
 ---
 
@@ -419,7 +420,7 @@ drm_transformer/
 |   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
 |   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
-|-- configs/scaling/            # 11 configs: 1M, 5M, 10M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
+|-- configs/scaling/multilingual/            # 12 configs: 1M, 5M, 10M, 15M, 50M, 125M, 350M, 1.3B, 13B, 70B, 162B, 640B
 |   +-- multilingual/          # Mesmas configs com vocab_size=50000 (o200k_base subset)
 |
 |-- eval-results/              # Resultados de foliation e avaliacao
