@@ -34,7 +34,12 @@ Plano de desenvolvimento do DRM Transformer.
 - [x] Baseline canonico small_1m com dataset fixo e early stop
 - [x] Matriz de ablacoes (full, no_gravity, no_gamma, no_variable_dim)
 - [x] Script de avaliacao padronizada (perplexity, futuro: HellaSwag/ARC)
+- [x] Script unico de reproducao (repro_baseline.py)
+- [x] Model card tecnico (MODEL_CARD.md)
+- [x] Smoke tests CI (8 testes: import, forward, config, seed determinism)
 - [ ] Rodar ablacoes e gerar results_ablations.md
+- [ ] Preencher MODEL_CARD.md com numeros reais
+- [ ] Tag de release v0.3.0-baseline com artefatos
 - [ ] Benchmarks padrao (HellaSwag, ARC, MMLU) pos-treinamento 350M+
 - [ ] Analise de curvatura: G(x) constante vs variavel (H0 vs H1)
 - [ ] Comparativo formal: DRM Transformer vs GPT-2 / LLaMA
