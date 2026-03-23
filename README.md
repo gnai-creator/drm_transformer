@@ -271,11 +271,16 @@ drm_transformer/
 |       +-- foliation.py        # DRMFoliationEvaluator (pipeline completo)
 |
 |-- scripts/
-|   |-- train_distributed.py    # Script de lancamento (single/multi GPU)
-|   |-- extract_drm_vectors.py  # Extrai coords, G_diag, gamma, mass
-|   +-- voronoi_foliation_drm.py # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
+|   |-- train_distributed.py        # Script de lancamento (single/multi GPU)
+|   |-- prepare_multilingual_data.py # Download Wikipedia + tokenize o200k_base + remap
+|   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
+|   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
-|-- configs/scaling/           # 9 configs: 1M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
+|-- configs/scaling/            # 9 configs: 1M, 15M, 50M, 350M, 1.3B, 13B, 70B, 162B, 640B
+|   +-- multilingual/          # Mesmas configs com vocab_size=50000 (o200k_base subset)
+|
+|-- eval-results/              # Resultados de foliation e avaliacao
+|
 +-- docs/                      # Documentacao
 ```
 
