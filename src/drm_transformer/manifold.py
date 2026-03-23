@@ -47,6 +47,66 @@ class ManifoldProjection(nn.Module):
         return self.inv_proj(coords)
 
 
+# Nomes dos anchors semanticos (para logging e interpretabilidade)
+ANCHOR_NAMES = [
+    "truth",       # baixa incerteza, alta qualidade
+    "ignorance",   # alta incerteza epistemica
+    "safety",      # regiao de seguranca
+    "complexity",  # alta complexidade de dominio
+    "creativity",  # exploracao, novidade
+    "grounding",   # factualidade, evidencia
+]
+
+# Primeiras 4 dims de cada anchor (dims extras preenchidas com 0.5)
+_ANCHOR_SEEDS = [
+    [0.1, 0.1, 0.5, 0.9],   # truth: baixa incerteza, alta qualidade
+    [0.9, 0.9, 0.5, 0.2],   # ignorance: alta incerteza epistemica
+    [0.1, 0.5, 0.1, 0.8],   # safety: seguranca, gamma alto longe daqui
+    [0.5, 0.5, 0.9, 0.5],   # complexity: alta complexidade
+    [0.8, 0.2, 0.5, 0.5],   # creativity: exploracao
+    [0.2, 0.2, 0.2, 0.7],   # grounding: factualidade
+]
+
+
+def create_semantic_anchors(
+    d_manifold: int,
+    n_anchors: int = 6,
+) -> torch.Tensor:
+    """Cria anchors com posicoes semanticas no manifold.
+
+    Inicializa com significado interpretavel mas mantidos como
+    nn.Parameter para o optimizer ajustar durante treino.
+
+    Os primeiros min(4, d_manifold) dims tem valores semanticos;
+    dims restantes preenchidas com 0.5 (neutro).
+
+    Se n_anchors > 6, extras inicializados com rand.
+    Se n_anchors <= 6, usa os primeiros n_anchors.
+
+    Args:
+        d_manifold: Dimensao do manifold.
+        n_anchors: Numero de anchors.
+
+    Returns:
+        Tensor [n_anchors, d_manifold] em [0, 1].
+    """
+    anchors = torch.full((n_anchors, d_manifold), 0.5)
+
+    n_seeds = min(n_anchors, len(_ANCHOR_SEEDS))
+    seed_dims = min(4, d_manifold)
+
+    for i in range(n_seeds):
+        anchors[i, :seed_dims] = torch.tensor(_ANCHOR_SEEDS[i][:seed_dims])
+
+    # Extras aleatorios (se n_anchors > 6)
+    if n_anchors > len(_ANCHOR_SEEDS):
+        anchors[len(_ANCHOR_SEEDS):] = torch.rand(
+            n_anchors - len(_ANCHOR_SEEDS), d_manifold,
+        )
+
+    return anchors
+
+
 def gamma_scale(
     coords: torch.Tensor,
     anchor_coords: torch.Tensor,

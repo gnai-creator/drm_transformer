@@ -49,6 +49,23 @@ num mapa plano e navegar na superficie real de um planeta.
    mascara suave. Tokens simples usam poucas dimensoes, tokens complexos usam mais.
 5. **Gamma-Scaling (Relativistic Dynamics)** -- Fator de Lorentz gamma escala
    adaptativamente a resolucao metrica conforme a distancia aos anchors no manifold.
+6. **Semantic Anchors** -- 6 pontos de referencia no manifold com significado
+   interpretavel (truth, ignorance, safety, complexity, creativity, grounding).
+   Inicializados com posicoes semanticas, aprendiveis pelo optimizer.
+
+### Anchors Semanticos
+
+| Anchor | Significado | Efeito no gamma-scaling |
+|--------|------------|------------------------|
+| truth | Baixa incerteza, alta qualidade | Tokens proximos: gamma ~1 (espaco normal) |
+| ignorance | Alta incerteza epistemica | Tokens proximos: gamma ~1; longe: espaco expande |
+| safety | Regiao de seguranca | Tokens longe de safety: gamma alto, mais resolucao |
+| complexity | Alta complexidade de dominio | Referencia para complexidade estrutural |
+| creativity | Exploracao, novidade | Zona de baixa restricao geometrica |
+| grounding | Factualidade, evidencia | Ancora para tokens factuais |
+
+Os anchors sao `nn.Parameter` -- o optimizer pode move-los durante o treino.
+A inicializacao semantica fornece um prior geometrico interpretavel.
 
 ---
 

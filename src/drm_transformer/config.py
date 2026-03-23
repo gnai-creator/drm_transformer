@@ -39,6 +39,8 @@ class DRMTransformerConfig:
     metric_hidden: int = 64
     n_quad: int = 0
 
+    n_anchors: int = 6
+
     gamma_enabled: bool = True
     gamma_c: float = 4.0
 

@@ -10,6 +10,7 @@ from .metric_net import MetricNet
 from .gravity import GravityField
 from .dimensional_gate import DimensionalGate
 from .layers import RMSNorm, DRMTransformerBlock
+from .manifold import create_semantic_anchors
 
 
 class DRMTransformer(nn.Module):
@@ -42,9 +43,8 @@ class DRMTransformer(nn.Module):
             if config.variable_dim else None
         )
 
-        n_anchors = 4
         self.anchors = nn.Parameter(
-            torch.rand(n_anchors, config.d_manifold),
+            create_semantic_anchors(config.d_manifold, config.n_anchors),
         )
 
         self.blocks = nn.ModuleList([
