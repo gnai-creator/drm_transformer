@@ -25,6 +25,7 @@ import plot_tsne
 import plot_axis_heatmap
 import plot_axis_separation
 import plot_combined
+import plot_calibration
 
 
 def main():
@@ -74,20 +75,23 @@ def main():
     logger.info("Gerando figuras...")
     logger.info("-" * 60)
 
-    logger.info("\n[fig 1/5] PCA...")
+    logger.info("\n[fig 1/6] PCA...")
     plot_pca.main()
 
-    logger.info("[fig 2/5] t-SNE...")
+    logger.info("[fig 2/6] t-SNE...")
     plot_tsne.main()
 
-    logger.info("[fig 3/5] Axis Heatmap...")
+    logger.info("[fig 3/6] Axis Heatmap...")
     plot_axis_heatmap.main()
 
-    logger.info("[fig 4/5] Axis Separation...")
+    logger.info("[fig 4/6] Axis Separation...")
     plot_axis_separation.main()
 
-    logger.info("[fig 5/5] Combined Panel...")
+    logger.info("[fig 5/6] Combined Panel...")
     plot_combined.main()
+
+    logger.info("[fig 6/6] Calibration...")
+    plot_calibration.main()
 
     # Resumo final
     import utils as _u
