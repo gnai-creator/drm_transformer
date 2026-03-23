@@ -17,6 +17,7 @@ import test_axes_projection
 import test_axis_statistics
 import test_semantic_separation
 import test_geometry_correlation
+import test_calibration
 
 # Importar modulos de plot
 import plot_pca
@@ -53,17 +54,20 @@ def main():
     logger.info("=" * 60)
 
     # --- Testes ---
-    logger.info("\n[1/4] Axes Projection...")
+    logger.info("\n[1/5] Axes Projection...")
     test_axes_projection.main()
 
-    logger.info("\n[2/4] Axis Statistics...")
+    logger.info("\n[2/5] Axis Statistics...")
     test_axis_statistics.main()
 
-    logger.info("\n[3/4] Semantic Separation...")
+    logger.info("\n[3/5] Semantic Separation...")
     test_semantic_separation.main()
 
-    logger.info("\n[4/4] Geometry Correlation...")
+    logger.info("\n[4/5] Geometry Correlation...")
     test_geometry_correlation.main()
+
+    logger.info("\n[5/5] Calibration (ECE, MCE, Brier, PPL)...")
+    test_calibration.main()
 
     # --- Figuras ---
     logger.info("\n" + "-" * 60)
