@@ -301,7 +301,7 @@ python scripts/voronoi_foliation_drm.py \
     --gamma eval_results/foliation_1m/drm_gamma.npy \
     --output-dir eval_results/foliation_1m \
     --n-seeds 30 \
-    --homology-points 1500
+    --homology-points 800
 ```
 
 Saidas: `foliation_results.json` com F-score, H1/H2, ARI, coherence, Reeb graph.

@@ -2,24 +2,24 @@
   "skipped": false,
   "homology": {
     "H0": {
-      "n_features": 477,
-      "long_bars": 28,
-      "max_persistence": 0.009578497149050236,
-      "mean_persistence": 0.002252658983123629
+      "n_features": 462,
+      "long_bars": 14,
+      "max_persistence": 0.016768720000982285,
+      "mean_persistence": 0.004193404059793127
     },
     "H1": {
-      "n_features": 179,
-      "long_bars": 15,
-      "max_persistence": 0.003187261987477541,
-      "mean_persistence": 0.0004700846029003281
+      "n_features": 129,
+      "long_bars": 6,
+      "max_persistence": 0.00914560817182064,
+      "mean_persistence": 0.0010670960173299608
     },
     "H2": {
-      "n_features": 34,
-      "long_bars": 3,
-      "max_persistence": 0.0010097520425915718,
-      "mean_persistence": 0.00020104077617254327
+      "n_features": 8,
+      "long_bars": 1,
+      "max_persistence": 0.0005216626450419426,
+      "mean_persistence": 0.00018317956710234284
     }
   },
-  "topology": "genus > 1 (H1=15)",
+  "topology": "genus > 1 (H1=6)",
   "t2_valid": false
 }
