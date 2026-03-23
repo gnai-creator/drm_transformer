@@ -10,12 +10,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+import utils as _u
 from utils import (
     set_seed, create_model, tokenize_texts, get_U_and_coords,
     aggregate_heads_mean, project_on_axes, compute_geodesic_dist,
     compute_euclidean_dist, silhouette, separation_ratio,
     get_all_texts_and_labels, load_results,
-    CLASS_NAMES, FIGURES_DIR, logger,
+    CLASS_NAMES, logger,
 )
 
 
@@ -228,7 +229,8 @@ def main():
     )
     plt.tight_layout()
 
-    out_path = FIGURES_DIR / "figure1_combined.png"
+    _u.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = _u.FIGURES_DIR / "figure1_combined.png"
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
     logger.info("Salvo: %s", out_path)

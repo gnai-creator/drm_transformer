@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.manifold import TSNE
 
+import utils as _u
 from utils import (
     set_seed, create_model, tokenize_texts, get_U_and_coords,
     aggregate_heads_mean, silhouette, get_all_texts_and_labels,
-    CLASS_NAMES, FIGURES_DIR, logger,
+    CLASS_NAMES, logger,
 )
 
 
@@ -63,7 +64,8 @@ def main():
     plt.suptitle("t-SNE: Pre-Manifold vs Manifold", fontsize=14, fontweight="bold")
     plt.tight_layout()
 
-    out_path = FIGURES_DIR / "tsne.png"
+    _u.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = _u.FIGURES_DIR / "tsne.png"
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close()
     logger.info("Salvo: %s", out_path)

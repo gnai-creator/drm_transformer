@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+import utils as _u
 from utils import (
     set_seed, create_model, tokenize_texts, get_U_and_coords,
     aggregate_heads_mean, project_on_axes, get_all_texts_and_labels,
-    CLASS_NAMES, CLASS_LABELS, FIGURES_DIR, logger,
+    CLASS_NAMES, CLASS_LABELS, logger,
 )
 
 
@@ -89,7 +90,8 @@ def main():
     ax.grid(True, alpha=0.3, axis="y")
 
     plt.tight_layout()
-    out_path = FIGURES_DIR / "axis_separation.png"
+    _u.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = _u.FIGURES_DIR / "axis_separation.png"
     plt.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close()
     logger.info("Salvo: %s", out_path)
