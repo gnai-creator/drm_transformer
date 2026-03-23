@@ -36,5 +36,8 @@ Thumbs.db
 # Notebooks
 .ipynb_checkpoints/
 
+# Eval results (binarios grandes)
+*.npy
+
 # Wandb
 wandb/
