@@ -3,21 +3,24 @@ Script de treinamento distribuido do DRM Transformer.
 
 Uso:
     # Single GPU
-    python scripts/train_distributed.py --config configs/scaling/15m.yaml --data-dir data/
+    python scripts/train_distributed.py --config configs/scaling/multilingual/15m.yaml --data-dir data/
 
     # Single GPU com resume
-    python scripts/train_distributed.py --config configs/scaling/350m.yaml --resume auto
+    python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml --resume auto
 
     # Multi-GPU (4 GPUs)
-    torchrun --nproc_per_node=4 scripts/train_distributed.py --config configs/scaling/1.3b.yaml
+    torchrun --nproc_per_node=4 scripts/train_distributed.py --config configs/scaling/multilingual/1.3b.yaml
 
     # Multi-node (2 nodes x 8 GPUs)
     torchrun --nnodes=2 --nproc_per_node=8 --node_rank=0 \
         --master_addr=<IP> --master_port=29500 \
-        scripts/train_distributed.py --config configs/scaling/13b.yaml
+        scripts/train_distributed.py --config configs/scaling/multilingual/13b.yaml
+
+    # Baseline reproduzivel
+    python scripts/train_distributed.py --config configs/baselines/small_1m.yaml --seed 42 --deterministic
 
     # Fine-tune de backbone
-    python scripts/train_distributed.py --config configs/scaling/350m.yaml \
+    python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml \
         --resume checkpoints/backbone.pt --finetune
 """
 

@@ -5,7 +5,7 @@ Passo-a-passo para reproduzir resultados do DRM Transformer do zero.
 ## 1. Ambiente
 
 ```bash
-# Python 3.12+, CUDA 12.8+
+# Python 3.10+ (testado com 3.12.3), CUDA 12.8+
 python --version   # 3.12.3
 nvidia-smi         # CUDA 12.8
 
