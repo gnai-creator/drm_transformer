@@ -54,6 +54,9 @@ class DRMTrainer:
             model.module if hasattr(model, "module") else model
         )
 
+        self._eval_no_improve = 0
+        self._early_stopped = False
+
         self._setup_optimizer()
         self._setup_precision()
         self._setup_dirs()
@@ -420,8 +423,17 @@ class DRMTrainer:
                 ):
                     self.evaluate()
                     self.model.train()
+                    if self._early_stopped:
+                        break
+
+            if self._early_stopped:
+                break
 
         total_time = time.time() - t0
+        batch_sz = self.config.get("batch_size", 16)
+        seq_len = self.config.get("max_seq_len", 1024)
+        total_tokens = self.global_step * batch_sz * seq_len * accum
+        avg_tok_s = total_tokens / max(total_time, 1)
 
         if is_main:
             self.save_checkpoint(tag="final")
@@ -433,12 +445,27 @@ class DRMTrainer:
                 json.dump(self._log_history, f, indent=2)
             logger.info("[LOG] Salvo: %s (%d entries)", log_path, len(self._log_history))
 
+            # Salvar metrics.json (sumario final)
+            metrics_summary = {
+                "final_loss": running_loss,
+                "best_val_loss": self.best_loss if self.best_loss < float("inf") else None,
+                "best_val_ppl": math.exp(min(self.best_loss, 20)) if self.best_loss < float("inf") else None,
+                "total_steps": self.global_step,
+                "total_tokens": total_tokens,
+                "total_time_s": round(total_time, 1),
+                "avg_tokens_per_s": round(avg_tok_s),
+                "skip_grads": skip_grads,
+                "early_stopped": self._early_stopped,
+                "seed": self.config.get("seed", "unknown"),
+            }
+            metrics_path = self.save_dir / "metrics.json"
+            with open(metrics_path, "w") as f:
+                json.dump(metrics_summary, f, indent=2)
+            logger.info("[METRICS] Salvo: %s", metrics_path)
+
             logger.info(
                 "[TRAINER] Concluido: %d steps em %.0fs (%.0f tok/s)",
-                self.global_step, total_time,
-                self.global_step * self.config.get("batch_size", 16)
-                * self.config.get("max_seq_len", 1024)
-                * accum / total_time,
+                self.global_step, total_time, avg_tok_s,
             )
 
         return {
@@ -446,6 +473,7 @@ class DRMTrainer:
             "final_loss": running_loss,
             "steps": self.global_step,
             "skip_grads": skip_grads,
+            "early_stopped": self._early_stopped,
         }
 
     @torch.no_grad()
@@ -476,14 +504,33 @@ class DRMTrainer:
                 break
 
         avg = total_loss / max(n_batches, 1)
+        ppl = math.exp(min(avg, 20))
         logger.info(
-            "[EVAL] step=%d | loss=%.4f | ppl=%.2f",
-            self.global_step, avg, math.exp(min(avg, 20)),
+            "[EVAL] step=%d | val_loss=%.4f | ppl=%.2f",
+            self.global_step, avg, ppl,
         )
+
+        # Salvar no historico de log
+        self._log_history.append({
+            "step": self.global_step,
+            "val_loss": avg,
+            "val_ppl": ppl,
+            "type": "eval",
+        })
 
         if avg < self.best_loss:
             self.best_loss = avg
+            self._eval_no_improve = 0
             self.save_checkpoint(tag="best")
+        else:
+            self._eval_no_improve += 1
+            patience = self.config.get("early_stop_patience", 0)
+            if patience > 0 and self._eval_no_improve >= patience:
+                logger.info(
+                    "[EARLY STOP] %d evals sem melhora (patience=%d)",
+                    self._eval_no_improve, patience,
+                )
+                self._early_stopped = True
 
         return avg
 

@@ -218,9 +218,10 @@ def main():
     )
 
     eval_loader = None
-    if args.eval_data_dir:
+    eval_data_dir = args.eval_data_dir or config.get("eval_data_dir", "")
+    if eval_data_dir:
         eval_loader = create_dataloader(
-            data_dir=args.eval_data_dir,
+            data_dir=eval_data_dir,
             seq_len=config.get("max_seq_len", 1024),
             batch_size=config.get("batch_size", 16),
             rank=rank,

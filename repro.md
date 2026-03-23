@@ -59,7 +59,34 @@ python scripts/prepare_multilingual_data.py \
     --langs en
 ```
 
-## 3. Treinamento
+## 3. Baseline Canonico (reprodutibilidade minima)
+
+Pipeline completo para validar o setup — qualquer pessoa pode rodar:
+
+```bash
+# 1. Gerar dataset baseline (Wikipedia EN, 10M tokens, publico, sem auth)
+python scripts/prepare_baseline_data.py
+
+# 2. Verificar integridade via SHA256
+python scripts/prepare_baseline_data.py --verify
+
+# 3. Treinar baseline (~1M params)
+python scripts/train_distributed.py \
+    --config configs/baselines/small_1m.yaml \
+    --seed 42 --deterministic
+```
+
+Resultado em `checkpoints/baseline_1m/`:
+
+| Arquivo | Conteudo |
+|---------|---------|
+| `run_manifest.json` | Git hash, config, hardware, deps |
+| `training_log.json` | Train loss + val loss + ppl por step |
+| `metrics.json` | Sumario final (best_val_loss, tokens/s, etc.) |
+| `final.pt` | Checkpoint do ultimo step |
+| `best.pt` | Checkpoint com menor val_loss |
+
+## 4. Treinamento (escala real)
 
 ```bash
 # Single GPU, seed fixa, modo deterministico
@@ -95,7 +122,7 @@ Ativa flags de determinismo no PyTorch:
 
 **Nota:** modo deterministico pode reduzir performance em ~5-10%.
 
-## 4. Run Manifest
+## 5. Run Manifest
 
 A cada treino, um `run_manifest.json` e salvo automaticamente no diretorio
 de checkpoints com:
@@ -129,7 +156,7 @@ de checkpoints com:
 }
 ```
 
-## 5. Criterio de Sucesso
+## 6. Criterio de Sucesso
 
 Duas execucoes com o mesmo comando, seed e hardware devem produzir:
 - **Loss final**: dentro de 1% de tolerancia
@@ -140,22 +167,22 @@ Para verificar:
 ```bash
 # Run 1
 python scripts/train_distributed.py \
-    --config configs/scaling/multilingual/1m.yaml \
-    --data-dir data/test --seed 42 --deterministic
+    --config configs/baselines/small_1m.yaml \
+    --seed 42 --deterministic
 
 # Mover checkpoints
-mv checkpoints checkpoints_run1
+mv checkpoints/baseline_1m checkpoints_run1
 
 # Run 2
 python scripts/train_distributed.py \
-    --config configs/scaling/multilingual/1m.yaml \
-    --data-dir data/test --seed 42 --deterministic
+    --config configs/baselines/small_1m.yaml \
+    --seed 42 --deterministic
 
 # Comparar
 python -c "
 import torch
 a = torch.load('checkpoints_run1/final.pt', weights_only=False)
-b = torch.load('checkpoints/final.pt', weights_only=False)
+b = torch.load('checkpoints/baseline_1m/final.pt', weights_only=False)
 for k in a['model']:
     diff = (a['model'][k] - b['model'][k]).abs().max().item()
     if diff > 0:
@@ -167,7 +194,7 @@ print('PASS' if all(
 "
 ```
 
-## 6. Limitacoes Conhecidas
+## 7. Limitacoes Conhecidas
 
 - **Multi-GPU**: NCCL pode introduzir nao-determinismo em reducoes.
   Para determinismo total, use single GPU.
