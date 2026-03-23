@@ -125,7 +125,7 @@ def main():
     if not args.skip_eval:
         steps_total += 1
         if _run([py, "scripts/eval_standard.py", "--all-ablations",
-                 "--output", "eval_results.json"],
+                 "--output", "checkpoints/baseline_1m/eval_results.json"],
                 "Avaliar perplexity de todas as variantes"):
             steps_ok += 1
         else:
