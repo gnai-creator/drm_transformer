@@ -31,15 +31,25 @@ por token e dimensionalidade variavel.
 
 12 scaling configs de 1M a 640B parametros. Baseline canonico: small_1m (1M params).
 
-## Metricas (Baseline small_1m)
-
-> Numeros serao preenchidos apos treino do baseline.
+## Metricas (Baseline small_1m, seed=42, 10M tokens Wikipedia EN)
 
 | Metrica | full | no_gravity | no_gamma | no_variable_dim |
 |---------|------|------------|----------|-----------------|
-| Val Loss | - | - | - | - |
-| Val PPL | - | - | - | - |
-| Tokens/s | - | - | - | - |
+| Val Loss | 6.415 | 6.385 | **6.321** | 6.428 |
+| Val PPL | 611.2 | 593.2 | **556.1** | 619.2 |
+| Train Loss | 6.344 | 5.883 | 6.252 | 6.308 |
+| Tokens/s | 86,163 | 92,464 | 86,468 | 86,360 |
+| Steps | 2,441 | 2,441 | 2,441 | 2,441 |
+| Skip Grads | 0 | 0 | 0 | 0 |
+| Tempo | 116s | 108s | 116s | 116s |
+
+**Observacoes (baseline 1M params — resultados preliminares):**
+- `no_gamma` obteve melhor val PPL (556.1), sugerindo que gamma-scaling
+  pode precisar de mais dados/escala para ser benefico.
+- `no_gravity` foi a variante mais rapida (92K tok/s) por evitar o compute RFF.
+- Nenhuma variante teve gradient skips, indicando estabilidade numerica.
+- Em escala tao pequena (1M params, 10M tokens), as diferencas entre variantes
+  sao marginais. Resultados em escala (350M+) pendentes.
 
 ## Limitacoes
 
