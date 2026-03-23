@@ -144,6 +144,10 @@ def main():
         gamma_c=config.get("gamma_c", 4.0),
         gravity_enabled=config.get("gravity_enabled", True),
         gravity_strength=config.get("gravity_strength", 0.1),
+        gravity_n_rff=config.get("gravity_n_rff", 64),
+        n_anchors=config.get("n_anchors", 6),
+        temperature_init=config.get("temperature_init", 1.0),
+        temperature_min=config.get("temperature_min", 0.5),
         variable_dim=config.get("variable_dim", True),
     )
 
