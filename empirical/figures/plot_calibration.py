@@ -57,9 +57,9 @@ def _compute_all(
     total = max(sum(bin_counts), 1)
     ece = sum(abs(a - c) * n / total for a, c, n in zip(bin_accs, bin_confs, bin_counts))
 
-    # Brier
+    # Brier multiclasse normalizado: / 2 para range [0, 1]
     one_hot = F.one_hot(targets, num_classes=logits.shape[-1]).float()
-    brier = float(((probs - one_hot) ** 2).sum(dim=-1).mean())
+    brier = float(((probs - one_hot) ** 2).sum(dim=-1).mean() / 2.0)
 
     # Perplexity
     log_probs = F.log_softmax(logits, dim=-1)

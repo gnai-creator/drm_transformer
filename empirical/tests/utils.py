@@ -28,6 +28,8 @@ FIGURES_DIR = _ROOT / "empirical" / "figures"
 
 # Checkpoint global — setado por run_all.py via --checkpoint
 _CHECKPOINT_PATH: Optional[str] = None
+# Vocab mapping: gpt2_token_id (str) -> remapped_id (int)
+_VOCAB_MAPPING: Optional[Dict[str, int]] = None
 
 
 def set_checkpoint(path: Optional[str]) -> None:
@@ -42,6 +44,25 @@ def set_output_dir(path: str) -> None:
     out = Path(path)
     RESULTS_PATH = out / "results.json"
     FIGURES_DIR = out / "figures"
+
+
+def _load_vocab_mapping(data_dir: str) -> None:
+    """Carrega vocab_mapping.json se existir no data_dir."""
+    global _VOCAB_MAPPING
+    mapping_path = Path(data_dir) / "vocab_mapping.json"
+    if not mapping_path.exists():
+        # Tentar relativo ao _ROOT
+        mapping_path = _ROOT / data_dir / "vocab_mapping.json"
+    if mapping_path.exists():
+        with open(mapping_path) as f:
+            data = json.load(f)
+        if "mapping" in data:
+            _VOCAB_MAPPING = data["mapping"]
+        else:
+            _VOCAB_MAPPING = data
+        logger.info("[VOCAB] Mapping carregado: %s (%d entries)", mapping_path, len(_VOCAB_MAPPING))
+    else:
+        logger.info("[VOCAB] Sem vocab_mapping.json em %s — usando modulo", data_dir)
 
 
 def set_seed(seed: int = 42) -> None:
@@ -99,6 +120,10 @@ def create_model(
                 variable_dim=cfg.get("variable_dim", True),
             )
             logger.info("[CONFIG] Config extraida do checkpoint")
+            # Carregar vocab mapping se data_dir disponivel
+            data_dir = cfg.get("data_dir")
+            if data_dir and _VOCAB_MAPPING is None:
+                _load_vocab_mapping(data_dir)
         else:
             config = DRMTransformerConfig(
                 d_model=64, n_heads=4, n_layers=4, d_ff=128,
@@ -160,11 +185,13 @@ def tokenize_texts(
 ) -> torch.Tensor:
     """Tokeniza lista de textos com padding/truncation.
 
+    Se vocab_mapping foi carregado (modelo multilingual), aplica o
+    remap real. Tokens sem mapping vao para 0 (unknown).
+
     Args:
         texts: Lista de strings.
         max_len: Comprimento maximo.
-        vocab_size: Tamanho do vocabulario do modelo. IDs >= vocab_size
-            sao remapeados com modulo para evitar index out of range.
+        vocab_size: Tamanho do vocabulario do modelo.
 
     Returns:
         Tensor [N, max_len] de input_ids.
@@ -173,8 +200,12 @@ def tokenize_texts(
     all_ids = []
     for text in texts:
         ids = enc.encode(text)[:max_len]
-        # Remapear tokens fora do vocab do modelo
-        ids = [t % vocab_size for t in ids]
+        if _VOCAB_MAPPING is not None:
+            # Remap usando o mapping real do treino
+            ids = [_VOCAB_MAPPING.get(str(t), 0) for t in ids]
+        elif vocab_size < 50257:
+            # Fallback: modulo (menos preciso)
+            ids = [t % vocab_size for t in ids]
         # Pad com token 0
         ids = ids + [0] * (max_len - len(ids))
         all_ids.append(ids)

@@ -54,10 +54,10 @@ def _compute_calibration(
         mce = torch.max(mce, gap)
 
     # --- Brier Score ---
-    # Brier = E[(p(correct) - 1)^2 + sum_j!=correct p(j)^2]
-    # Simplificado: mean(sum((one_hot - probs)^2))
+    # Brier multiclasse normalizado: mean(sum((one_hot - probs)^2)) / 2
+    # Range [0, 1]. Random baseline = 1 - 1/V.
     one_hot = F.one_hot(targets, num_classes=logits.shape[-1]).float()
-    brier = ((probs - one_hot) ** 2).sum(dim=-1).mean()
+    brier = ((probs - one_hot) ** 2).sum(dim=-1).mean() / 2.0
 
     # --- Perplexity ---
     log_probs = F.log_softmax(logits, dim=-1)
