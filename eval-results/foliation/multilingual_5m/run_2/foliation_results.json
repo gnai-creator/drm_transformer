@@ -1,0 +1,134 @@
+{
+  "timestamp": "2026-03-24 04:06:22",
+  "ltsa": {
+    "mean_eff_dim": 3.7,
+    "eff_dims_dist": [
+      1,
+      1,
+      4,
+      24
+    ],
+    "cell_sizes": [
+      2744,
+      9282,
+      6163,
+      2961,
+      2008,
+      1887,
+      3716,
+      2991,
+      4559,
+      2873,
+      6723,
+      2427,
+      3670,
+      2889,
+      2218,
+      2826,
+      3250,
+      2264,
+      2652,
+      3154,
+      5858,
+      1951,
+      2807,
+      2535,
+      3580,
+      2103,
+      2107,
+      2704,
+      2699,
+      2239
+    ]
+  },
+  "coherence": {
+    "mean_angle": 0.8616098252046254,
+    "median_angle": 0.0,
+    "coherent_fraction": 0.98
+  },
+  "reeb": {
+    "gamma": {
+      "func_name": "gamma",
+      "skipped": true,
+      "f_std": 0.0003966742369811982
+    },
+    "coord_0": {
+      "func_name": "coord_0",
+      "skipped": true,
+      "f_std": 0.0032377096358686686
+    }
+  },
+  "homology": {
+    "skipped": false,
+    "homology": {
+      "H0": {
+        "n_features": 462,
+        "long_bars": 21,
+        "max_persistence": 0.04160083085298538,
+        "mean_persistence": 0.01672536288352796
+      },
+      "H1": {
+        "n_features": 238,
+        "long_bars": 17,
+        "max_persistence": 0.013876168057322502,
+        "mean_persistence": 0.0030560609141067297
+      },
+      "H2": {
+        "n_features": 60,
+        "long_bars": 4,
+        "max_persistence": 0.005529157817363739,
+        "mean_persistence": 0.0011954929369191328
+      }
+    },
+    "topology": "genus > 1 (H1=17)",
+    "t2_valid": false
+  },
+  "null_models": {
+    "shuffled": {
+      "type": "shuffled",
+      "mean_coherence_angle": 0.00012880832375174544,
+      "coherent_fraction": 1.0,
+      "dim_entropy": 0.45056120886630463,
+      "mean_eff_dim": 3.8333333333333335
+    },
+    "uniform": {
+      "type": "uniform",
+      "mean_coherence_angle": 3.806248878734853e-07,
+      "coherent_fraction": 1.0,
+      "dim_entropy": 0.6571577614973405,
+      "mean_eff_dim": 3.3666666666666667
+    }
+  },
+  "stability": {
+    "mean_ari": 0.7327264918081758,
+    "std_ari": 0.02772542076106039,
+    "n_restarts": 10
+  },
+  "foliation_score": 0.36899781903401263,
+  "coords_correlation": {
+    "coord_0": {
+      "F": 20174.92578125,
+      "p": 0.0
+    },
+    "coord_1": {
+      "F": 54450.98046875,
+      "p": 0.0
+    },
+    "coord_2": {
+      "F": 115030.453125,
+      "p": 0.0
+    },
+    "coord_3": {
+      "F": 99790.2578125,
+      "p": 0.0
+    }
+  },
+  "config": {
+    "n_seeds": 30,
+    "n_restarts": 10,
+    "homology_points": 800,
+    "use_gamma_distance": false,
+    "n_vectors": 99840,
+    "d_manifold": 4
+  }
+}

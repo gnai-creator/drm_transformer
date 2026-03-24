@@ -1,0 +1,12 @@
+{
+  "func_name": "coord_0",
+  "skipped": false,
+  "transform": "logit",
+  "n_nodes": 557,
+  "n_edges": 369,
+  "n_splits": 68,
+  "n_merges": 75,
+  "is_tree": false,
+  "f_std_raw": 0.030742624774575233,
+  "f_std_final": 0.12325645238161087
+}

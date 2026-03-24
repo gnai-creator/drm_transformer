@@ -1,0 +1,11 @@
+{
+  "checkpoint": "checkpoints/multilingual_5m/run_3/final.pt",
+  "label": "drm",
+  "n_vectors": 99840,
+  "d_manifold": 4,
+  "gamma_enabled": true,
+  "gamma_c": 2.45,
+  "gravity_enabled": true,
+  "max_seq_len": 512,
+  "timestamp": "2026-03-24 05:24:30"
+}

@@ -17,8 +17,8 @@ eval_interval: 500
 early_stopping_patience: 5
 
 # --- Manifold DRM ---
-d_manifold: 4
-metric_hidden: 16
+d_manifold: 6
+metric_hidden: 24
 metric_rank: 4
 n_quad: 0
 
@@ -40,7 +40,7 @@ lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.03
 lambda_ortho: 0.01
 metric_diversity_warmup_steps: 2000
-save_dir: checkpoints/multilingual_5m/run_1
+save_dir: checkpoints/multilingual_5m/run_4
 save_interval: 500
 log_interval: 50
 target_metric_var: 0.001
