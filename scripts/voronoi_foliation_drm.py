@@ -211,7 +211,7 @@ def compute_reeb_graph(
     func_name: str = "gamma",
     n_levels: int = 50,
     n_neighbors: int = 15,
-    std_threshold: float = 0.15,
+    std_threshold: float = 0.03  # era 0.15
 ) -> dict:
     """Grafo de Reeb via level sets.
 

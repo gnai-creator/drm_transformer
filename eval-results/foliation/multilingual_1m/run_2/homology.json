@@ -1,0 +1,25 @@
+{
+  "skipped": false,
+  "homology": {
+    "H0": {
+      "n_features": 462,
+      "long_bars": 26,
+      "max_persistence": 0.005741371773183346,
+      "mean_persistence": 0.0017787536545843087
+    },
+    "H1": {
+      "n_features": 142,
+      "long_bars": 11,
+      "max_persistence": 0.001700283493846655,
+      "mean_persistence": 0.0003683708819665644
+    },
+    "H2": {
+      "n_features": 8,
+      "long_bars": 1,
+      "max_persistence": 0.00019565364345908165,
+      "mean_persistence": 6.334407953545451e-05
+    }
+  },
+  "topology": "genus > 1 (H1=11)",
+  "t2_valid": false
+}
