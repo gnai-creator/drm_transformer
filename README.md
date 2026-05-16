@@ -7,6 +7,7 @@
 [![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/multilingual/)
 [![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
 [![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
+[![Foliation](https://img.shields.io/badge/Stable-H1%3D2%20H2%3D1-brightgreen.svg)](repro.md#analise-de-foliacao)
 
 ## Indice
 

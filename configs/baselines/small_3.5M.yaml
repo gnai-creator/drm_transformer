@@ -56,10 +56,13 @@ lambda_metric_diversity: 0.01
 lambda_ortho: 0.01
 lambda_manifold_variance: 0.05
 target_manifold_std: 0.08
-lambda_torus: 0.05 #subiu de 0.02
+lambda_torus: 0.07 # subiu de 0.05 #subiu de 0.02
 torus_target_radius: 0.35
-torus_coverage_weight: 0.5 # subiu de 0.25
-torus_isotropy_weight: 0.5
+torus_radial_weight: 5.0
+torus_coverage_weight: 0.75 # subiu de 0.5 # subiu de 0.25
+torus_isotropy_weight: 0.75 # subiu de 0.5
+torus_independence_weight: 0.25
+torus_harmonic_weight: 0.5
 geometry_warmup_steps: 500
 metric_diversity_warmup_steps: 500
 target_metric_var: 0.001

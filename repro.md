@@ -247,13 +247,14 @@ python scripts/extract_drm_vectors.py \
     --output-dir eval-results/foliation_3.5m \
     --max-tokens 100000
 
-python scripts/voronoi_foliation_drm.py \
+python .\scripts\voronoi_foliation_drm.py \
     --coords eval-results/foliation_3.5m/drm_coords.npy \
-    --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
-    --gamma eval-results/foliation_3.5m/drm_gamma.npy \
-    --output-dir eval-results/foliation_3.5m \
-    --n-seeds 30 \
-    --homology-points 800 \
+    --G-diag /eval-results/foliation_3.5m/drm_G_diag.npy \
+    --gamma /eval-results/foliation_3.5m/drm_gamma.npy \
+    --output-dir /eval-results/foliation_3.5m \
+    --n-seeds 80 \
+    --homology-points 1200 \
+    --homology-long-bar-ratio 0.75 \
     --homology-restarts 5
 ```
 

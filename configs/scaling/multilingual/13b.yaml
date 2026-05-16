@@ -48,8 +48,11 @@ lambda_manifold_variance: 0.05
 target_manifold_std: 0.08
 lambda_torus: 0.02
 torus_target_radius: 0.35
+torus_radial_weight: 1.0
 torus_coverage_weight: 0.25
 torus_isotropy_weight: 0.5
+torus_independence_weight: 0.5
+torus_harmonic_weight: 0.5
 geometry_warmup_steps: 20000
 save_dir: checkpoints/multilingual_13b
 save_interval: 500

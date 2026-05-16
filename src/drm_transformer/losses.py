@@ -118,8 +118,11 @@ def manifold_variance_loss(
 def torus_regularization_loss(
     coords: torch.Tensor,
     target_radius: float = 0.35,
+    radial_weight: float = 1.0,
     coverage_weight: float = 0.25,
     isotropy_weight: float = 0.5,
+    independence_weight: float = 0.5,
+    harmonic_weight: float = 0.5,
 ) -> torch.Tensor:
     """Regularizacao toroidal para d_manifold >= 4.
 
@@ -130,8 +133,11 @@ def torus_regularization_loss(
     Args:
         coords: [B, T, D] ou [B, H, T, D] em [0, 1].
         target_radius: Raio alvo em torno de 0.5.
+        radial_weight: Peso interno para afinar a espessura radial do toro.
         coverage_weight: Peso interno da penalidade de cobertura angular.
         isotropy_weight: Peso interno para evitar ciclos elipticos/colapsados.
+        independence_weight: Peso interno para desacoplar os dois ciclos.
+        harmonic_weight: Peso interno para evitar cobertura angular bilobada.
 
     Returns:
         Loss escalar. Retorna zero se D < 4.
@@ -169,7 +175,32 @@ def torus_regularization_loss(
 
     isotropy = _pair_isotropy(xy) + _pair_isotropy(uv)
 
-    return (radial + coverage_weight * coverage + isotropy_weight * isotropy).to(coords.dtype)
+    # Coverage pela media vetorial zera tambem em dois lobos opostos. O termo
+    # de segunda harmonica penaliza esse falso circulo: em uma circunferencia
+    # bem coberta, E[cos(2 theta)] e E[sin(2 theta)] ficam perto de zero.
+    def _second_harmonic(unit_pair: torch.Tensor) -> torch.Tensor:
+        cos_t = unit_pair[:, 0]
+        sin_t = unit_pair[:, 1]
+        cos_2t = cos_t.pow(2) - sin_t.pow(2)
+        sin_2t = 2.0 * cos_t * sin_t
+        return cos_2t.mean().pow(2) + sin_2t.mean().pow(2)
+
+    harmonic = _second_harmonic(c1) + _second_harmonic(c2)
+
+    # Evita que os dois angulos variem juntos como uma curva diagonal em T2.
+    # Para um produto S1 x S1 bem coberto, a correlacao entre os vetores
+    # circulares dos dois pares deve ficar perto de zero.
+    cross = c1.unsqueeze(-1) * c2.unsqueeze(-2)  # [N, 2, 2]
+    independence = cross.mean(dim=0).pow(2).sum()
+
+    loss = (
+        radial_weight * radial
+        + coverage_weight * coverage
+        + isotropy_weight * isotropy
+        + independence_weight * independence
+        + harmonic_weight * harmonic
+    )
+    return loss.to(coords.dtype)
 
 
 def anchor_alignment_loss(
