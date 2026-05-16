@@ -33,6 +33,8 @@ por token e dimensionalidade variavel.
 
 ## Metricas (Baseline small_3.5M, seed=42, 10M tokens Wikipedia EN)
 
+### Linguagem
+
 | Metrica | full | no_gravity | no_gamma | no_variable_dim |
 |---------|------|------------|----------|-----------------|
 | Val Loss | 6.415 | 6.385 | **6.321** | 6.428 |
@@ -51,10 +53,48 @@ por token e dimensionalidade variavel.
 - Em escala tao pequena (3.5M params, 10M tokens), as diferencas entre variantes
   sao marginais. Resultados em escala (350M+) pendentes.
 
+### Topologia DRM
+
+Resultado de Voronoi Foliation no baseline small_3.5M:
+
+| Metrica | Valor |
+|---------|-------|
+| Topologia | torus T^2 (stable) |
+| H1 long bars | 2 |
+| H2 long bars | 1 |
+| T2 stable fraction | 0.60 |
+| Foliation score | 0.4410 |
+| ARI | 0.7959 |
+| Homology points | 1200 |
+| Homology restarts | 5 |
+| Long-bar ratio | 0.75 |
+
+Comando de referencia:
+
+```bash
+python scripts/voronoi_foliation_drm.py \
+    --coords eval-results/foliation_3.5m/drm_coords.npy \
+    --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
+    --gamma eval-results/foliation_3.5m/drm_gamma.npy \
+    --output-dir eval-results/foliation_3.5m \
+    --n-seeds 80 \
+    --homology-points 1200 \
+    --homology-long-bar-ratio 0.75 \
+    --homology-restarts 5
+```
+
+O resultado valida a assinatura topologica `H1=2, H2=1` de forma estavel pelo
+criterio `t2_stable_fraction >= 0.60`. A geometria local ainda e experimental:
+LTSA indicou uma nuvem espessa em 4D em alguns runs, entao este resultado deve
+ser lido como topologia persistente estavel, nao como uma parametrizacao
+toroidal perfeitamente fina.
+
 ## Limitacoes
 
 - **Escala atual**: baseline testado com 3.5M params / 10M tokens. Resultados
   em escala (350M+) ainda em andamento.
+- **Geometria topologica**: `H1=2, H2=1` foi validado no baseline pequeno, mas
+  a limpeza local do manifold ainda depende de pesos de regularizacao toroidal.
 - **Benchmarks**: HellaSwag, ARC e MMLU pendentes -- requerem modelo em escala.
 - **Linguas**: treinado em 5 linguas europeias. Performance em outras linguas
   nao avaliada.

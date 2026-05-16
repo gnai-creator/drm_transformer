@@ -290,23 +290,26 @@ logits, loss = model(input_ids, targets)
 ```bash
 # 1. Extrair vectores DRM
 python scripts/extract_drm_vectors.py \
-    --checkpoint checkpoints/1m/final.pt \
+    --checkpoint checkpoints/baseline_3.5m/final.pt \
     --data-dir data/ \
-    --output-dir eval_results/foliation_1m \
+    --output-dir eval-results/foliation_3.5m \
     --max-tokens 100000
 
 # 2. Voronoi Foliation (9 fases: LTSA, Homology, Reeb, ARI, ...)
 python scripts/voronoi_foliation_drm.py \
-    --coords eval_results/foliation_1m/drm_coords.npy \
-    --G-diag eval_results/foliation_1m/drm_G_diag.npy \
-    --gamma eval_results/foliation_1m/drm_gamma.npy \
-    --output-dir eval_results/foliation_1m \
-    --n-seeds 30 \
-    --homology-points 800
+    --coords eval-results/foliation_3.5m/drm_coords.npy \
+    --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
+    --gamma eval-results/foliation_3.5m/drm_gamma.npy \
+    --output-dir eval-results/foliation_3.5m \
+    --n-seeds 80 \
+    --homology-points 1200 \
+    --homology-long-bar-ratio 0.75 \
+    --homology-restarts 5
 ```
 
 Saidas: `foliation_results.json` com F-score, H1/H2, ARI, coherence, Reeb graph.
-H1 alto num modelo sem treino indica topologia nao-trivial; F > 0.5 = foliation robusta.
+Baseline atual: `H1=2`, `H2=1`, `t2_stable_fraction=0.60`, classificado como
+`torus T^2 (stable)` pelo criterio de homologia persistente com subsamples.
 
 ### Avaliacao via API Python
 
