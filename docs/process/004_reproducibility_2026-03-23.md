@@ -20,7 +20,7 @@ run manifest automatico, lock de dependencias e guia de reproducao.
 
 - **warn_only=True** no `use_deterministic_algorithms`: evita crash em ops sem implementacao deterministica, apenas emite warning
 - **CUBLAS_WORKSPACE_CONFIG=:4096:8**: necessario para determinismo em matmul CUDA
-- **Manifest JSON por run**: captura git hash, config hash, hardware, deps — permite rastrear qualquer experimento
+- **Manifest JSON por run**: captura git hash, config hash, hardware, deps -- permite rastrear qualquer experimento
 - **requirements-lock.txt** em vez de poetry/uv: simplicidade, sem tooling adicional
 
 ## Proximos Passos

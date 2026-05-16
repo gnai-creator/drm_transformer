@@ -27,7 +27,7 @@ por token e dimensionalidade variavel.
 | Tokenizer | tiktoken o200k_base (remapeado para 50K) |
 | Baseline | Wikipedia EN 10M tokens (publico) |
 
-## Configuracoes Disponíveis
+## Configuracoes Disponiveis
 
 12 scaling configs de 1M a 640B parametros. Baseline canonico: small_1m (1M params).
 
@@ -43,7 +43,7 @@ por token e dimensionalidade variavel.
 | Skip Grads | 0 | 0 | 0 | 0 |
 | Tempo | 116s | 108s | 116s | 116s |
 
-**Observacoes (baseline 1M params — resultados preliminares):**
+**Observacoes (baseline 1M params -- resultados preliminares):**
 - `no_gamma` obteve melhor val PPL (556.1), sugerindo que gamma-scaling
   pode precisar de mais dados/escala para ser benefico.
 - `no_gravity` foi a variante mais rapida (92K tok/s) por evitar o compute RFF.
@@ -55,7 +55,7 @@ por token e dimensionalidade variavel.
 
 - **Escala atual**: baseline testado com 1M params / 10M tokens. Resultados
   em escala (350M+) ainda em andamento.
-- **Benchmarks**: HellaSwag, ARC e MMLU pendentes — requerem modelo em escala.
+- **Benchmarks**: HellaSwag, ARC e MMLU pendentes -- requerem modelo em escala.
 - **Linguas**: treinado em 5 linguas europeias. Performance em outras linguas
   nao avaliada.
 - **Determinismo multi-GPU**: NCCL pode introduzir nao-determinismo.
@@ -77,7 +77,7 @@ por token e dimensionalidade variavel.
 
 - Modelo de linguagem generativo pode produzir conteudo incorreto ou prejudicial
 - Treinado em dados web (CulturaX = mC4 + OSCAR) que podem conter bias
-- Nao passou por RLHF ou alinhamento — saida bruta do pre-treino
+- Nao passou por RLHF ou alinhamento -- saida bruta do pre-treino
 
 ## Reprodutibilidade
 

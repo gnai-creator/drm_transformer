@@ -212,12 +212,13 @@ def test_config_consistency():
         "target_metric_var", "weight_decay", "adam_beta1", "adam_beta2",
         "max_grad_norm", "min_lr_ratio",
         "gradient_checkpointing", "distributed", "fsdp", "fsdp_sharding",
-        "compile_model", "data_max_tokens",
+        "compile_model", "data_max_tokens", "num_workers", "eval_num_workers",
     }
 
     config_dirs = [
         Path("configs/baselines"),
         Path("configs/ablations"),
+        Path("configs/ablations_pt"),
         Path("configs/scaling/multilingual"),
     ]
 

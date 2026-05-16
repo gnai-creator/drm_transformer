@@ -336,8 +336,8 @@ python empirical/tests/run_all.py \
 ```
 
 Saidas:
-- `empirical/results.json` — metricas de projecao, estatisticas dos eixos, separacao semantica, correlacao geometrica
-- `empirical/figures/` — PCA, t-SNE, axis heatmap, axis separation, painel combinado 2x3
+- `empirical/results.json` -- metricas de projecao, estatisticas dos eixos, separacao semantica, correlacao geometrica
+- `empirical/figures/` -- PCA, t-SNE, axis heatmap, axis separation, painel combinado 2x3
 
 ---
 

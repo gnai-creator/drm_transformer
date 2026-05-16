@@ -25,7 +25,7 @@ Avaliacao via log-likelihood ranking (zero-shot):
 2. Selecionar opcao com maior likelihood
 3. Comparar com ground truth
 
-Isso nao requer fine-tuning — funciona com o modelo pre-treinado.
+Isso nao requer fine-tuning -- funciona com o modelo pre-treinado.
 
 ## Pre-requisitos
 

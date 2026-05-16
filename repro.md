@@ -61,7 +61,7 @@ python scripts/prepare_multilingual_data.py \
 
 ## 3. Baseline Canonico (reprodutibilidade minima)
 
-Pipeline completo para validar o setup — qualquer pessoa pode rodar:
+Pipeline completo para validar o setup -- qualquer pessoa pode rodar:
 
 ```bash
 # 1. Gerar dataset baseline (Wikipedia EN, 10M tokens, publico, sem auth)
@@ -257,7 +257,7 @@ Exemplo de output:
     Complete:        100.0%
 
   REPRODUCIBILITY
-    PPL deviation:   (pendente — rodar 2x com mesma seed)
+    PPL deviation:   (pendente -- rodar 2x com mesma seed)
 ```
 
 Os KPIs tambem ficam salvos em `repro_report.json` sob a chave `"kpis"`.

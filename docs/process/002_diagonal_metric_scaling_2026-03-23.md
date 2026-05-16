@@ -17,7 +17,7 @@ O DRM Transformer tinha 3 problemas de escalabilidade:
 
 ## Solucao
 
-### 1. Metrica Diagonal — O(T^2 * d)
+### 1. Metrica Diagonal -- O(T^2 * d)
 
 **metric_net.py**: MetricNet agora produz apenas diagonal `[N, D]` via `softplus(mlp(x)) + 1e-5`.
 Removido Cholesky (L, tril_indices). Positividade garantida por softplus.
@@ -69,7 +69,7 @@ mantido para backward compatibility.
 
 ## Impacto
 
-- **Complexidade**: O(T^2 * d) vs O(T^2 * d^2) — ~16x menos com d=16
+- **Complexidade**: O(T^2 * d) vs O(T^2 * d^2) -- ~16x menos com d=16
 - **Estabilidade**: gamma max 3.0, annealing gradual, normalizacao de distancia
 - **Corretude**: cada head tem paisagem gravitacional independente
 - **Backward compat**: API externa inalterada, losses aceitam ambos formatos

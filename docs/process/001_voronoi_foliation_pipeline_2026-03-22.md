@@ -10,9 +10,9 @@ drm-transformer. Permite computar H1/H2 (homologia persistente) e ARI
 
 ## Diferencas vs Aletheion-LLM-v2
 
-- Nao ha epistemic head separada — coords extraidas via q_to_manifold do layer 0
+- Nao ha epistemic head separada -- coords extraidas via q_to_manifold do layer 0
 - d_manifold variavel (4-40), nao fixo em 5
-- Sem q1/q2/confidence/vi/phi — usa coords raw + G_diag + gamma + mass
+- Sem q1/q2/confidence/vi/phi -- usa coords raw + G_diag + gamma + mass
 - G(x) sempre disponivel (MetricNet e parte do modelo)
 - Anchors sao nn.Parameter (4 pontos), nao fixos
 - Reeb graph usa gamma/mass como funcao de Morse (nao confidence/phi)

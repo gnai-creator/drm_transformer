@@ -218,6 +218,7 @@ def main():
         max_tokens=config.get("data_max_tokens", 0),
         rank=rank,
         world_size=world_size,
+        num_workers=config.get("num_workers", 2),
     )
 
     eval_loader = None
@@ -229,6 +230,7 @@ def main():
             batch_size=config.get("batch_size", 16),
             rank=rank,
             world_size=world_size,
+            num_workers=config.get("eval_num_workers", config.get("num_workers", 2)),
         )
 
     trainer = DRMTrainer(

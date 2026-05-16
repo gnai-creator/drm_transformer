@@ -1,10 +1,5 @@
-# Baseline canonico ~1M params
-# Dataset: data/multilingual_pt/ (CulturaX PT remapeado para vocab 50K)
-# Reproduzivel: python scripts/train_distributed.py --config configs/baselines/small_1m.yaml --deterministic
-#
-# Criterio de sucesso: duas runs identicas produzem loss final dentro de 1% de tolerancia.
+# Ablation PT: sem DimensionalGate
 
-# --- Modelo ---
 vocab_size: 50000
 d_model: 20
 n_heads: 2
@@ -14,54 +9,45 @@ max_seq_len: 256
 dropout: 0.1
 bias: false
 
-# --- Dados ---
 data_dir: data/multilingual_pt/train
 eval_data_dir: data/multilingual_pt/val
-data_max_tokens: 10_000_000
+data_max_tokens: 1_000_000
 
-# --- Treino ---
 batch_size: 16
 learning_rate: 0.001
 warmup_steps: 100
-total_tokens: 10_000_000
+total_tokens: 1_000_000
 mixed_precision: none
 gradient_accumulation_steps: 1
 num_workers: 0
 eval_num_workers: 0
 
-# --- Avaliacao ---
 eval_interval: 100
 early_stop_patience: 10
 
-# --- Manifold DRM ---
 d_manifold: 4
 metric_hidden: 8
 metric_rank: 2
 n_quad: 0
 
-# --- Gamma-Scaling ---
 gamma_enabled: true
 gamma_c: 2.0
 gamma_alpha: 1.0
 
-# --- Gravidade ---
 gravity_enabled: true
 gravity_strength: 0.1
 gravity_n_rff: 64
 n_anchors: 6
 
-# --- Dimensionalidade variavel ---
-variable_dim: true
+variable_dim: false
 
-# --- Losses DRM ---
 lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.01
 lambda_ortho: 0.01
 metric_diversity_warmup_steps: 100
 target_metric_var: 0.001
 
-# --- Checkpointing ---
-save_dir: checkpoints/baseline_pt_1m
+save_dir: checkpoints/ablations_pt_1m/no_variable_dim
 save_interval: 100
 save_total_limit: 3
 log_interval: 20

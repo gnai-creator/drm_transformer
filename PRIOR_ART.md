@@ -88,7 +88,7 @@ A distincao fundamental e:
 
 Nenhum dos trabalhos academicos listados implementa Geodesic Attention com
 tensor metrico aprendido G(x), Gravitational Token Embedding, Gamma-Scaling
-relativístico, DimensionalGate com dimD(p) variavel, ou Metric Diversity Loss.
+relativistico, DimensionalGate com dimD(p) variavel, ou Metric Diversity Loss.
 Estes sao contribuicoes originais de Felipe Maya Muniz.
 
 ---
