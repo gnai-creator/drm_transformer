@@ -293,10 +293,12 @@ class DRMTrainer:
             if lambda_torus > 0:
                 torus_radius = self.config.get("torus_target_radius", 0.35)
                 coverage_weight = self.config.get("torus_coverage_weight", 0.25)
+                isotropy_weight = self.config.get("torus_isotropy_weight", 0.5)
                 drm_loss = drm_loss + lambda_torus * torus_regularization_loss(
                     coords,
                     target_radius=torus_radius,
                     coverage_weight=coverage_weight,
+                    isotropy_weight=isotropy_weight,
                 )
 
         # U precisa de grad para MetricNet aprender, mas nao força coords por

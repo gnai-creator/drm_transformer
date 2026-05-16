@@ -119,6 +119,7 @@ def torus_regularization_loss(
     coords: torch.Tensor,
     target_radius: float = 0.35,
     coverage_weight: float = 0.25,
+    isotropy_weight: float = 0.5,
 ) -> torch.Tensor:
     """Regularizacao toroidal para d_manifold >= 4.
 
@@ -130,6 +131,7 @@ def torus_regularization_loss(
         coords: [B, T, D] ou [B, H, T, D] em [0, 1].
         target_radius: Raio alvo em torno de 0.5.
         coverage_weight: Peso interno da penalidade de cobertura angular.
+        isotropy_weight: Peso interno para evitar ciclos elipticos/colapsados.
 
     Returns:
         Loss escalar. Retorna zero se D < 4.
@@ -156,7 +158,18 @@ def torus_regularization_loss(
     # Boa cobertura angular tem media vetorial perto de zero nos dois ciclos.
     coverage = c1.mean(dim=0).pow(2).sum() + c2.mean(dim=0).pow(2).sum()
 
-    return (radial + coverage_weight * coverage).to(coords.dtype)
+    # Um toro em R4 precisa de dois ciclos circulares, nao um ciclo forte e um
+    # eixo fino. Para cada par, os segundos momentos dos dois eixos devem ser
+    # parecidos e a covariancia cruzada deve ficar perto de zero.
+    def _pair_isotropy(pair: torch.Tensor) -> torch.Tensor:
+        xx = pair[:, 0].pow(2).mean()
+        yy = pair[:, 1].pow(2).mean()
+        xy = (pair[:, 0] * pair[:, 1]).mean()
+        return (xx - yy).pow(2) + xy.pow(2)
+
+    isotropy = _pair_isotropy(xy) + _pair_isotropy(uv)
+
+    return (radial + coverage_weight * coverage + isotropy_weight * isotropy).to(coords.dtype)
 
 
 def anchor_alignment_loss(

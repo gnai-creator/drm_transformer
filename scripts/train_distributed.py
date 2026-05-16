@@ -19,6 +19,9 @@ Uso:
     # Baseline reproduzivel
     python scripts/train_distributed.py --config configs/baselines/small_3.5M.yaml --seed 42 --deterministic
 
+    # Forcar CUDA em single GPU
+    python scripts/train_distributed.py --config configs/baselines/small_3.5M.yaml --device cuda
+
     # Fine-tune de backbone
     python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml \
         --resume checkpoints/backbone.pt --finetune
@@ -102,12 +105,16 @@ def main():
     parser.add_argument("--override", nargs="*", help="Overrides: key=value")
     parser.add_argument("--seed", type=int, default=42, help="Seed global (default: 42)")
     parser.add_argument("--deterministic", action="store_true", help="Ativa flags deterministicas")
+    parser.add_argument("--device", default="auto",
+                        help="Device para single-process: auto, cpu, cuda ou cuda:N")
     args = parser.parse_args()
 
     config = _load_config(args.config)
 
     if args.data_dir:
         config["data_dir"] = args.data_dir
+    if args.device != "auto":
+        config["device"] = args.device
     if args.override:
         for ov in args.override:
             key, val = ov.split("=", 1)
@@ -144,6 +151,7 @@ def main():
     is_main = dist_info["is_main"]
     device = dist_info["device"]
     config["_is_main"] = is_main
+    config["_device"] = str(device)
 
     model_config = DRMTransformerConfig(
         vocab_size=config.get("vocab_size", 50257),
@@ -188,6 +196,7 @@ def main():
             config.get("gradient_accumulation_steps", 1),
             world_size,
         )
+        logger.info("[CONFIG] device=%s", device)
 
     model = DRMTransformer(model_config)
 

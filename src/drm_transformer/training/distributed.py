@@ -11,6 +11,38 @@ from typing import Dict
 logger = logging.getLogger(__name__)
 
 
+def _resolve_device(requested: str = "auto") -> str:
+    """Resolve device para execucao single-process."""
+    requested = (requested or "auto").lower()
+
+    if requested == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
+    if requested.startswith("cuda"):
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "Device CUDA solicitado, mas torch.cuda.is_available() retornou False. "
+                "Instale uma build CUDA do PyTorch ou use --device cpu."
+            )
+
+        if ":" in requested:
+            try:
+                index = int(requested.split(":", 1)[1])
+            except ValueError as exc:
+                raise ValueError(f"Device CUDA invalido: {requested}") from exc
+            if index < 0 or index >= torch.cuda.device_count():
+                raise ValueError(
+                    f"Device {requested} indisponivel; GPUs detectadas: {torch.cuda.device_count()}"
+                )
+
+        return requested
+
+    if requested == "cpu":
+        return "cpu"
+
+    raise ValueError(f"Device invalido: {requested}. Use auto, cpu, cuda ou cuda:N.")
+
+
 def setup_distributed(config: dict) -> Dict:
     """Inicializa ambiente distribuido.
 
@@ -23,7 +55,7 @@ def setup_distributed(config: dict) -> Dict:
         Dict com rank, local_rank, world_size, device, is_main.
     """
     if not config.get("distributed", False):
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = _resolve_device(config.get("device", "auto"))
         return {
             "rank": 0,
             "local_rank": 0,

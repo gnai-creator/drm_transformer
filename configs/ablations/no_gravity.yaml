@@ -53,6 +53,7 @@ target_manifold_std: 0.08
 lambda_torus: 0.02
 torus_target_radius: 0.35
 torus_coverage_weight: 0.25
+torus_isotropy_weight: 0.5
 geometry_warmup_steps: 500
 metric_diversity_warmup_steps: 500
 target_metric_var: 0.001
