@@ -369,6 +369,10 @@ def compute_homology(
     G_diag: np.ndarray = None,
     max_points: int = 1500,
     max_dim: int = 2,
+    n_restarts: int = 5,
+    normalize: bool = True,
+    long_bar_ratio: float = 0.5,
+    random_seed: int = 42,
 ) -> dict:
     """Persistent homology (H0, H1, H2) via ripser.
 
@@ -377,11 +381,18 @@ def compute_homology(
         G_diag: [N, D] diagonal de G(x) para distancia ponderada.
         max_points: Subsample maximo.
         max_dim: Dimensao maxima da homologia.
+        n_restarts: Numero de subsamples independentes para estabilidade.
+        normalize: Padronizar coordenadas antes do ripser.
+        long_bar_ratio: Barra longa se persistence >= ratio * max_persistence.
+        random_seed: Seed base dos subsamples.
 
     Returns:
         Dict com H0, H1, H2, topology label.
     """
-    logger.info("[FASE 5] Persistent Homology (max_points=%d)", max_points)
+    logger.info(
+        "[FASE 5] Persistent Homology (max_points=%d, restarts=%d)",
+        max_points, n_restarts,
+    )
 
     try:
         from ripser import ripser
@@ -389,61 +400,103 @@ def compute_homology(
         logger.warning("  [SKIP] ripser nao instalado")
         return {"skipped": True}
 
-    N = len(coords)
-    if N > max_points:
-        idx = np.random.default_rng(42).choice(N, max_points, replace=False)
-        pts = coords[idx]
-        g_diag = G_diag[idx] if G_diag is not None else None
-    else:
-        pts = coords
-        g_diag = G_diag
+    coords_work = coords.astype(np.float32)
+    if normalize:
+        mean = coords_work.mean(axis=0, keepdims=True)
+        std = coords_work.std(axis=0, keepdims=True)
+        coords_work = (coords_work - mean) / np.maximum(std, 1e-6)
 
-    # Distancia: se temos G_diag, usar Mahalanobis diagonal
-    if g_diag is not None:
-        n = len(pts)
-        dist_matrix = np.zeros((n, n), dtype=np.float32)
-        for i in range(n):
-            delta = pts[i] - pts[i+1:]
-            # G_mean = media das diagonais dos dois pontos
-            g_mean = (g_diag[i] + g_diag[i+1:]) / 2.0
-            # d^2 = sum(delta^2 * g_mean) por eixo
-            d_sq = (delta ** 2 * g_mean).sum(axis=-1)
-            dist_matrix[i, i+1:] = np.sqrt(np.maximum(d_sq, 0))
-            dist_matrix[i+1:, i] = dist_matrix[i, i+1:]
+    def _run_once(seed: int) -> tuple[dict, list]:
+        N = len(coords_work)
+        if N > max_points:
+            idx = np.random.default_rng(seed).choice(N, max_points, replace=False)
+            pts = coords_work[idx]
+            g_diag = G_diag[idx] if G_diag is not None else None
+        else:
+            pts = coords_work
+            g_diag = G_diag
 
-        result = ripser(dist_matrix, maxdim=max_dim, distance_matrix=True)
-    else:
-        result = ripser(pts, maxdim=max_dim)
+        # Distancia: se temos G_diag, usar Mahalanobis diagonal.
+        if g_diag is not None:
+            n = len(pts)
+            dist_matrix = np.zeros((n, n), dtype=np.float32)
+            for i in range(n):
+                delta = pts[i] - pts[i+1:]
+                g_mean = (g_diag[i] + g_diag[i+1:]) / 2.0
+                d_sq = (delta ** 2 * g_mean).sum(axis=-1)
+                dist_matrix[i, i+1:] = np.sqrt(np.maximum(d_sq, 0))
+                dist_matrix[i+1:, i] = dist_matrix[i, i+1:]
 
-    diagrams = result["dgms"]
+            result = ripser(dist_matrix, maxdim=max_dim, distance_matrix=True)
+        else:
+            result = ripser(pts, maxdim=max_dim)
+
+        diagrams = result["dgms"]
+        summary = {}
+        saved_diagrams = []
+        for d in range(min(len(diagrams), max_dim + 1)):
+            dgm = diagrams[d]
+            finite = dgm[np.isfinite(dgm[:, 1])]
+            saved_diagrams.append(finite.tolist())
+            if len(finite) == 0:
+                summary[f"H{d}"] = {
+                    "n_features": 0,
+                    "long_bars": 0,
+                    "threshold": 0.0,
+                    "top_persistence": [],
+                }
+                continue
+
+            persistence = finite[:, 1] - finite[:, 0]
+            max_p = float(persistence.max())
+            threshold = max_p * long_bar_ratio
+            long_bars = int((persistence >= threshold).sum()) if max_p > 0 else 0
+            top = np.sort(persistence)[::-1][:10]
+
+            summary[f"H{d}"] = {
+                "n_features": int(len(persistence)),
+                "long_bars": long_bars,
+                "threshold": float(threshold),
+                "max_persistence": max_p,
+                "mean_persistence": float(persistence.mean()),
+                "top_persistence": [float(x) for x in top],
+            }
+
+        return summary, saved_diagrams
+
+    restart_summaries = []
+    first_diagrams = []
+    for r in range(max(n_restarts, 1)):
+        summary, diagrams = _run_once(random_seed + r)
+        restart_summaries.append(summary)
+        if r == 0:
+            first_diagrams = diagrams
 
     homology = {}
-    for d in range(min(len(diagrams), max_dim + 1)):
-        dgm = diagrams[d]
-        finite = dgm[np.isfinite(dgm[:, 1])]
-        if len(finite) == 0:
-            homology[f"H{d}"] = {"n_features": 0, "long_bars": 0}
-            continue
-
-        persistence = finite[:, 1] - finite[:, 0]
-        med = np.median(persistence)
-        std = persistence.std()
-        threshold = med + 2 * std
-        long_bars = int((persistence > threshold).sum())
-
-        homology[f"H{d}"] = {
-            "n_features": len(persistence),
-            "long_bars": long_bars,
-            "max_persistence": float(persistence.max()),
-            "mean_persistence": float(persistence.mean()),
+    for d in range(max_dim + 1):
+        key = f"H{d}"
+        counts = np.array([s.get(key, {}).get("long_bars", 0) for s in restart_summaries])
+        features = np.array([s.get(key, {}).get("n_features", 0) for s in restart_summaries])
+        max_p = np.array([s.get(key, {}).get("max_persistence", 0.0) for s in restart_summaries])
+        first = restart_summaries[0].get(key, {})
+        homology[key] = {
+            "n_features": int(np.median(features)) if len(features) else 0,
+            "long_bars": int(np.median(counts)) if len(counts) else 0,
+            "long_bars_by_restart": counts.astype(int).tolist(),
+            "long_bars_std": float(counts.std()) if len(counts) else 0.0,
+            "max_persistence_median": float(np.median(max_p)) if len(max_p) else 0.0,
+            "first_restart": first,
         }
 
+    h1_counts = np.array(homology.get("H1", {}).get("long_bars_by_restart", [0]))
+    h2_counts = np.array(homology.get("H2", {}).get("long_bars_by_restart", [0]))
     h1_long = homology.get("H1", {}).get("long_bars", 0)
     h2_long = homology.get("H2", {}).get("long_bars", 0)
+    t2_stable_fraction = float(((h1_counts == 2) & (h2_counts == 1)).mean())
 
     if h1_long == 2 and h2_long == 1:
-        topology = "torus T^2 (validated)"
-        t2_valid = True
+        topology = "torus T^2 (stable)" if t2_stable_fraction >= 0.6 else "torus T^2 (unstable)"
+        t2_valid = t2_stable_fraction >= 0.6
     elif h1_long == 0 and h2_long == 0:
         topology = "trivial"
         t2_valid = False
@@ -461,15 +514,22 @@ def compute_homology(
         t2_valid = False
 
     logger.info(
-        "  H1=%d long, H2=%d long -> %s",
-        h1_long, h2_long, topology,
+        "  H1=%d long, H2=%d long, T2 stable=%.2f -> %s",
+        h1_long, h2_long, t2_stable_fraction, topology,
     )
 
     return {
         "skipped": False,
         "homology": homology,
+        "diagrams_first_restart": first_diagrams,
         "topology": topology,
         "t2_valid": t2_valid,
+        "t2_stable_fraction": t2_stable_fraction,
+        "normalization": "zscore" if normalize else "none",
+        "long_bar_rule": {
+            "type": "relative_to_max_persistence",
+            "ratio": long_bar_ratio,
+        },
     }
 
 
@@ -659,6 +719,9 @@ def main():
     parser.add_argument("--n-seeds", type=int, default=30)
     parser.add_argument("--n-restarts", type=int, default=10)
     parser.add_argument("--homology-points", type=int, default=1500)
+    parser.add_argument("--homology-restarts", type=int, default=5)
+    parser.add_argument("--homology-long-bar-ratio", type=float, default=0.5)
+    parser.add_argument("--no-homology-normalize", action="store_true")
     parser.add_argument("--use-gamma-distance", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
@@ -727,7 +790,12 @@ def main():
 
     # FASE 5
     homology = compute_homology(
-        coords, G_diag=G_diag, max_points=args.homology_points,
+        coords,
+        G_diag=G_diag,
+        max_points=args.homology_points,
+        n_restarts=args.homology_restarts,
+        normalize=not args.no_homology_normalize,
+        long_bar_ratio=args.homology_long_bar_ratio,
     )
     results["homology"] = homology
 
@@ -758,6 +826,9 @@ def main():
         "n_seeds": args.n_seeds,
         "n_restarts": args.n_restarts,
         "homology_points": args.homology_points,
+        "homology_restarts": args.homology_restarts,
+        "homology_normalize": not args.no_homology_normalize,
+        "homology_long_bar_ratio": args.homology_long_bar_ratio,
         "use_gamma_distance": args.use_gamma_distance,
         "n_vectors": len(coords),
         "d_manifold": D,

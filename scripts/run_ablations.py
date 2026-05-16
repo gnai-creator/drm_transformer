@@ -1,22 +1,25 @@
 """Roda matriz de ablacoes e consolida resultados.
 
-Executa cada config de ablacao sequencialmente, coleta metrics.json
-de cada run e gera results_ablations.md com tabela comparativa.
+Usa o baseline canonico ja treinado como variante ``full`` e executa
+as demais configs de ablacao sequencialmente. Coleta metrics.json de cada
+run e gera results_ablations.md com tabela comparativa.
 
 Uso:
     python scripts/run_ablations.py
     python scripts/run_ablations.py --seed 42 --deterministic
     python scripts/run_ablations.py --only full,no_gravity
+    python scripts/run_ablations.py --rerun-full  # forca novo treino full
     python scripts/run_ablations.py --collect-only   # so consolida resultados existentes
 
 Requisitos:
     - Dataset baseline gerado (python scripts/prepare_baseline_data.py)
+    - Baseline treinado para reaproveitar como full:
+      python scripts/train_distributed.py --config configs/baselines/small_3.5M.yaml --seed 42 --deterministic
 """
 
 import argparse
 import json
 import logging
-import math
 import subprocess
 import sys
 import time
@@ -28,6 +31,8 @@ logger = logging.getLogger(__name__)
 ABLATION_DIR = Path("configs/ablations")
 RESULTS_DIR = Path("checkpoints/baseline_3.5m")
 RESULTS_FILE = RESULTS_DIR / "results_ablations.md"
+BASELINE_CHECKPOINT_DIR = Path("checkpoints/baseline_3.5m")
+ABLATION_CHECKPOINT_DIR = Path("checkpoints/ablations")
 
 ABLATIONS = {
     "full": "Modelo completo (gravity + gamma + variable_dim)",
@@ -35,6 +40,39 @@ ABLATIONS = {
     "no_gamma": "Sem gamma-scaling (Lorentz)",
     "no_variable_dim": "Sem DimensionalGate",
 }
+
+
+def _read_metrics(name: str, metrics_path: Path, log_path: Path) -> dict:
+    with open(metrics_path) as f:
+        metrics = json.load(f)
+
+    metrics["name"] = name
+
+    if log_path.exists():
+        with open(log_path) as f:
+            log = json.load(f)
+        train_entries = [e for e in log if e.get("type") != "eval"]
+        if train_entries:
+            metrics["final_train_loss"] = train_entries[-1].get("loss")
+
+    return metrics
+
+
+def collect_baseline_as_full() -> dict:
+    """Coleta o baseline canonico como variante full."""
+    metrics_path = BASELINE_CHECKPOINT_DIR / "metrics.json"
+    if not metrics_path.exists():
+        return {}
+
+    metrics = _read_metrics(
+        "full",
+        metrics_path,
+        BASELINE_CHECKPOINT_DIR / "training_log.json",
+    )
+    metrics["status"] = "OK"
+    metrics["source"] = "baseline"
+    logger.info("[FULL] usando baseline existente: %s", metrics_path)
+    return metrics
 
 
 def run_ablation(name: str, seed: int, deterministic: bool) -> dict:
@@ -65,26 +103,18 @@ def run_ablation(name: str, seed: int, deterministic: bool) -> dict:
         return {"name": name, "status": "FAIL", "wall_time_s": round(elapsed)}
 
     # Ler metrics.json
-    metrics_path = Path(f"checkpoints/ablations/{name}/metrics.json")
+    metrics_path = ABLATION_CHECKPOINT_DIR / name / "metrics.json"
     if not metrics_path.exists():
         logger.error("[FAIL] metrics.json nao encontrado: %s", metrics_path)
         return {"name": name, "status": "FAIL", "wall_time_s": round(elapsed)}
 
-    with open(metrics_path) as f:
-        metrics = json.load(f)
-
-    metrics["name"] = name
+    metrics = _read_metrics(
+        name,
+        metrics_path,
+        ABLATION_CHECKPOINT_DIR / name / "training_log.json",
+    )
     metrics["status"] = "OK"
     metrics["wall_time_s"] = round(elapsed)
-
-    # Ler training_log para contar NaN/skip grads
-    log_path = Path(f"checkpoints/ablations/{name}/training_log.json")
-    if log_path.exists():
-        with open(log_path) as f:
-            log = json.load(f)
-        train_entries = [e for e in log if e.get("type") != "eval"]
-        if train_entries:
-            metrics["final_train_loss"] = train_entries[-1].get("loss")
 
     logger.info("[DONE] %s: val_loss=%.4f, ppl=%.2f, time=%ds",
                 name,
@@ -95,27 +125,27 @@ def run_ablation(name: str, seed: int, deterministic: bool) -> dict:
     return metrics
 
 
-def collect_results() -> list:
+def collect_results(use_baseline_full: bool = True) -> list:
     """Coleta metrics.json de todas as ablacoes ja rodadas."""
     results = []
+    if use_baseline_full:
+        baseline = collect_baseline_as_full()
+        if baseline:
+            results.append(baseline)
+
     for name in ABLATIONS:
-        metrics_path = Path(f"checkpoints/ablations/{name}/metrics.json")
+        if name == "full" and use_baseline_full:
+            continue
+
+        metrics_path = ABLATION_CHECKPOINT_DIR / name / "metrics.json"
         if not metrics_path.exists():
             continue
-        with open(metrics_path) as f:
-            metrics = json.load(f)
-        metrics["name"] = name
 
-        # Training log para train loss final
-        log_path = Path(f"checkpoints/ablations/{name}/training_log.json")
-        if log_path.exists():
-            with open(log_path) as f:
-                log = json.load(f)
-            train_entries = [e for e in log if e.get("type") != "eval"]
-            if train_entries:
-                metrics["final_train_loss"] = train_entries[-1].get("loss")
-
-        results.append(metrics)
+        results.append(_read_metrics(
+            name,
+            metrics_path,
+            ABLATION_CHECKPOINT_DIR / name / "training_log.json",
+        ))
     return results
 
 
@@ -186,6 +216,7 @@ def generate_table(results: list) -> str:
         "",
         "```bash",
         "python scripts/prepare_baseline_data.py",
+        "python scripts/train_distributed.py --config configs/baselines/small_3.5M.yaml --seed 42 --deterministic",
         "python scripts/run_ablations.py --seed 42 --deterministic",
         "```",
     ])
@@ -200,14 +231,27 @@ def main():
     parser.add_argument("--only", default="", help="Ablacoes especificas (virgula)")
     parser.add_argument("--collect-only", action="store_true",
                         help="Apenas consolida resultados existentes")
+    parser.add_argument("--rerun-full", action="store_true",
+                        help="Treina configs/ablations/full.yaml em vez de usar o baseline ja treinado")
     args = parser.parse_args()
 
     if args.collect_only:
-        results = collect_results()
+        results = collect_results(use_baseline_full=not args.rerun_full)
     else:
         names = [n.strip() for n in args.only.split(",")] if args.only else list(ABLATIONS)
 
         results = []
+        if "full" in names and not args.rerun_full:
+            baseline = collect_baseline_as_full()
+            if baseline:
+                results.append(baseline)
+                names = [name for name in names if name != "full"]
+            else:
+                logger.warning(
+                    "[FULL] baseline nao encontrado em %s; treinando configs/ablations/full.yaml",
+                    BASELINE_CHECKPOINT_DIR,
+                )
+
         for name in names:
             if name not in ABLATIONS:
                 logger.warning("[SKIP] Ablacao desconhecida: %s", name)

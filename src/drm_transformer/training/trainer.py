@@ -178,8 +178,8 @@ class DRMTrainer:
         """Extrai metricas DRM para logging.
 
         Returns:
-            Dict com metric_G_var, metric_G_diag_mean, metric_G_frob,
-            gamma_mean, mass_mean, temperature, diversity_active, etc.
+            Dict com metric_U_norm_mean, gamma_mean, mass_mean, temperature,
+            diversity_active, etc.
         """
         metrics = {}
         model = self.raw_model
@@ -253,27 +253,54 @@ class DRMTrainer:
         if metric_net is None:
             return drm_loss
 
-        from ..losses import metric_regularization, metric_diversity_loss
+        from ..losses import (
+            metric_regularization,
+            metric_diversity_loss,
+            manifold_variance_loss,
+            torus_regularization_loss,
+        )
 
         lambda_reg = self.config.get("lambda_metric_reg", 0.001)
         lambda_div = self.config.get("lambda_metric_diversity", 0.05)
+        lambda_manifold_var = self.config.get("lambda_manifold_variance", 0.0)
+        lambda_torus = self.config.get("lambda_torus", 0.0)
         warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
+        warmup_geometry = self.config.get("geometry_warmup_steps", warmup_div)
 
         # Extrair coords reais do batch via block 0
-        with torch.no_grad():
-            x = model.token_emb(input_ids)
-            if model.dim_gate is not None:
-                x, _ = model.dim_gate(x)
-            block0 = model.blocks[0]
-            x_normed = block0.norm1(x)
-            B, T = input_ids.shape
-            q = block0.attn.q_proj(x_normed)
-            q = q.view(B, T, block0.attn.n_heads, block0.attn.d_head)
-            q = q.transpose(1, 2)
-            coords = torch.sigmoid(block0.attn.q_to_manifold(q[:, 0]))
+        # Mantemos gradiente em coords para perdas que combatem colapso do
+        # projetor q_to_manifold. As perdas de MetricNet continuam usando
+        # coords.detach() para preservar o contrato original.
+        x = model.token_emb(input_ids)
+        if model.dim_gate is not None:
+            x, _ = model.dim_gate(x)
+        block0 = model.blocks[0]
+        x_normed = block0.norm1(x)
+        B, T = input_ids.shape
+        q = block0.attn.q_proj(x_normed)
+        q = q.view(B, T, block0.attn.n_heads, block0.attn.d_head)
+        q = q.transpose(1, 2)
+        coords = torch.sigmoid(block0.attn.q_to_manifold(q[:, 0]))
 
-        # coords.detach() ja garantido pelo no_grad acima
-        # Mas U precisa de grad para MetricNet aprender
+        if self.global_step >= warmup_geometry:
+            if lambda_manifold_var > 0:
+                target_std = self.config.get("target_manifold_std", 0.08)
+                drm_loss = drm_loss + lambda_manifold_var * manifold_variance_loss(
+                    coords,
+                    target_std=target_std,
+                )
+
+            if lambda_torus > 0:
+                torus_radius = self.config.get("torus_target_radius", 0.35)
+                coverage_weight = self.config.get("torus_coverage_weight", 0.25)
+                drm_loss = drm_loss + lambda_torus * torus_regularization_loss(
+                    coords,
+                    target_radius=torus_radius,
+                    coverage_weight=coverage_weight,
+                )
+
+        # U precisa de grad para MetricNet aprender, mas nao força coords por
+        # este termo.
         U = metric_net(coords.detach().reshape(-1, metric_net.dim))
         U = U.view(B, T, metric_net.dim, metric_net.rank)
 

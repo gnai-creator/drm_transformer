@@ -349,7 +349,7 @@ Saidas:
 python scripts/repro_baseline.py
 ```
 
-Gera dataset baseline, treina, roda ablacoes e consolida KPIs automaticamente.
+Gera dataset baseline, treina, roda as ablacoes restantes e consolida KPIs automaticamente.
 Ver [repro.md](repro.md) para guia detalhado e [MODEL_CARD.md](MODEL_CARD.md) para model card.
 
 ### Baseline Canonico
@@ -365,8 +365,8 @@ python scripts/train_distributed.py \
 ### Ablacoes
 
 ```bash
-python scripts/run_ablations.py --seed 42 --deterministic  # 4 variantes
-python scripts/eval_standard.py --all-ablations            # Perplexity comparativa
+python scripts/run_ablations.py --seed 42 --deterministic  # usa baseline como full
+python scripts/eval_standard.py --all-ablations            # perplexity comparativa
 ```
 
 | Variante | Gravity | Gamma | VarDim |
@@ -379,7 +379,7 @@ python scripts/eval_standard.py --all-ablations            # Perplexity comparat
 ### Smoke Tests
 
 ```bash
-pytest tests/test_smoke.py -v   # 8 testes (~5s)
+pytest tests/test_smoke.py -v   # 12 testes (~5s)
 ```
 
 ---
@@ -468,7 +468,7 @@ drm_transformer/
 |   |-- prepare_multilingual_data.py # Download CulturaX/Wikipedia + tokenize + remap (streaming)
 |   |-- prepare_baseline_data.py     # Dataset baseline fixo (Wikipedia EN 10M tokens, SHA256)
 |   |-- repro_baseline.py           # Reproducao completa em um comando + KPI dashboard
-|   |-- run_ablations.py            # Roda 4 ablacoes e gera results_ablations.md
+|   |-- run_ablations.py            # Roda ablacoes restantes e gera results_ablations.md
 |   |-- eval_standard.py            # Avaliacao padronizada (perplexity)
 |   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
 |   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
@@ -476,10 +476,10 @@ drm_transformer/
 |-- configs/
 |   |-- scaling/multilingual/  # 12 configs: 1M a 640B params
 |   |-- baselines/             # Baseline canonico (small_3.5M.yaml)
-|   +-- ablations/             # 4 ablacoes (full, no_gravity, no_gamma, no_variable_dim)
+|   +-- ablations/             # Ablacoes (full opcional, no_gravity, no_gamma, no_variable_dim)
 |
 |-- tests/
-|   +-- test_smoke.py          # 8 smoke tests (import, forward, config, seed)
+|   +-- test_smoke.py          # 12 smoke tests (import, forward, config, seed)
 |
 |-- empirical/                 # Validacao empirica dos eixos semanticos
 |   |-- results.json           # Resultados consolidados

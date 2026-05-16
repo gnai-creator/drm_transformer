@@ -40,6 +40,12 @@ lambda_metric_reg: 0.001
 lambda_metric_diversity: 0.01
 lambda_ortho: 0.01
 metric_diversity_warmup_steps: 6000
+lambda_manifold_variance: 0.05
+target_manifold_std: 0.08
+lambda_torus: 0.02
+torus_target_radius: 0.35
+torus_coverage_weight: 0.25
+geometry_warmup_steps: 6000
 save_dir: checkpoints/multilingual_15m/run_1
 save_interval: 500
 log_interval: 50

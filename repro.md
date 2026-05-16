@@ -36,24 +36,12 @@ pip install -e ".[all]"
 
 ## 2. Dados
 
-```bash
-# Login no HuggingFace (necessario para CulturaX)
-huggingface-cli login
-
-# Download + tokenizacao (streaming, memoria constante)
-python scripts/prepare_multilingual_data.py \
-    --output-dir data/multilingual \
-    --max-tokens 20000000000 \
-    --vocab-size 50000 \
-    --langs en,pt,es,fr,de
-```
-
 Para testes rapidos (minutos em vez de horas):
 
 ```bash
 python scripts/prepare_multilingual_data.py \
     --source wikipedia \
-    --output-dir data/test \
+    --output-dir data/multilingual \
     --max-tokens 10000000 \
     --vocab-size 50000 \
     --langs en
@@ -86,30 +74,14 @@ Resultado em `checkpoints/baseline_3.5m/`:
 | `final.pt` | Checkpoint do ultimo step |
 | `best.pt` | Checkpoint com menor val_loss |
 
-## 4. Treinamento (escala real)
+## 4. Ablacoes e Avaliacao
 
 ```bash
-# Single GPU, seed fixa, modo deterministico
-python scripts/train_distributed.py \
-    --config configs/scaling/multilingual/15m.yaml \
-    --data-dir data/multilingual \
-    --seed 42 \
-    --deterministic
-
-# Multi-GPU
-torchrun --nproc_per_node=4 scripts/train_distributed.py \
-    --config configs/scaling/multilingual/350m.yaml \
-    --data-dir data/multilingual \
-    --seed 42
-```
-
-## 5. Ablacoes e Avaliacao
-
-```bash
-# Rodar todas as ablacoes (full, no_gravity, no_gamma, no_variable_dim)
+# Rodar as ablacoes restantes.
+# O full vem do baseline ja treinado em checkpoints/baseline_3.5m/.
 python scripts/run_ablations.py --seed 42 --deterministic
 
-# Avaliar perplexity de todas as ablacoes
+# Avaliar perplexity de todas as variantes, incluindo o baseline como full
 python scripts/eval_standard.py --all-ablations
 
 # Ou avaliar um checkpoint especifico
@@ -117,11 +89,12 @@ python scripts/eval_standard.py \
     --checkpoint checkpoints/baseline_3.5m/best.pt \
     --eval-data data/baseline/val
 
-# Apenas consolidar resultados de ablacoes ja rodadas
+# Apenas consolidar resultados ja rodados, reaproveitando o baseline como full
 python scripts/run_ablations.py --collect-only
 ```
 
-Resultado: `results_ablations.md` com tabela comparativa + `results_ablations.json`.
+Resultado: `checkpoints/baseline_3.5m/results_ablations.md` com tabela
+comparativa + `checkpoints/baseline_3.5m/results_ablations.json`.
 
 | Variante | Gravity | Gamma | VarDim | Descricao |
 |----------|---------|-------|--------|-----------|
@@ -149,7 +122,7 @@ Ativa flags de determinismo no PyTorch:
 
 **Nota:** modo deterministico pode reduzir performance em ~5-10%.
 
-## 6. Run Manifest
+## 5. Run Manifest
 
 A cada treino, um `run_manifest.json` e salvo automaticamente no diretorio
 de checkpoints com:
@@ -183,7 +156,7 @@ de checkpoints com:
 }
 ```
 
-## 7. Criterio de Sucesso
+## 6. Criterio de Sucesso
 
 Duas execucoes com o mesmo comando, seed e hardware devem produzir:
 - **Loss final**: dentro de 1% de tolerancia
@@ -221,7 +194,7 @@ print('PASS' if all(
 "
 ```
 
-## 8. KPIs de Acompanhamento
+## 7. KPIs de Acompanhamento
 
 O `repro_baseline.py` gera um dashboard de KPIs automaticamente no final:
 
@@ -261,6 +234,31 @@ Exemplo de output:
 ```
 
 Os KPIs tambem ficam salvos em `repro_report.json` sob a chave `"kpis"`.
+
+## 8. Analise de Foliacao
+
+Depois de treinar um checkpoint novo com as losses geometricas, extraia os
+vetores DRM e rode a avaliacao de folheacao:
+
+```bash
+python scripts/extract_drm_vectors.py \
+    --checkpoint checkpoints/baseline_3.5m/final.pt \
+    --data-dir data/ \
+    --output-dir eval-results/foliation_3.5m \
+    --max-tokens 100000
+
+python scripts/voronoi_foliation_drm.py \
+    --coords eval-results/foliation_3.5m/drm_coords.npy \
+    --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
+    --gamma eval-results/foliation_3.5m/drm_gamma.npy \
+    --output-dir eval-results/foliation_3.5m \
+    --n-seeds 30 \
+    --homology-points 800 \
+    --homology-restarts 5
+```
+
+O alvo topologico `H1=2, H2=1` so e considerado validado quando aparece de
+forma estavel nos subsamples de homologia (`t2_stable_fraction >= 0.6`).
 
 ## 9. Limitacoes Conhecidas
 

@@ -85,6 +85,80 @@ def axis_variance_loss(U: torch.Tensor) -> torch.Tensor:
     return torch.tensor(0.0, device=U.device)
 
 
+def manifold_variance_loss(
+    coords: torch.Tensor,
+    target_std: float = 0.08,
+) -> torch.Tensor:
+    """Penaliza colapso das coordenadas do manifold.
+
+    A loss e zero quando cada eixo tem desvio-padrao medio acima do alvo.
+    Diferente da diversity em U(x), esta loss deve receber gradiente ate o
+    projetor q_to_manifold para abrir a nuvem de coordenadas.
+
+    Args:
+        coords: [B, T, D] ou [B, H, T, D] coordenadas no manifold.
+        target_std: Desvio-padrao minimo por eixo.
+
+    Returns:
+        Loss escalar.
+    """
+    if coords.dim() == 4:
+        flat = coords.transpose(1, 2).reshape(-1, coords.shape[-1])
+    else:
+        flat = coords.reshape(-1, coords.shape[-1])
+
+    if flat.shape[0] < 2:
+        return torch.tensor(0.0, device=coords.device, dtype=coords.dtype)
+
+    std = flat.float().std(dim=0, unbiased=False)
+    target = torch.as_tensor(target_std, device=std.device, dtype=std.dtype)
+    return F.relu(target - std).pow(2).mean().to(coords.dtype)
+
+
+def torus_regularization_loss(
+    coords: torch.Tensor,
+    target_radius: float = 0.35,
+    coverage_weight: float = 0.25,
+) -> torch.Tensor:
+    """Regularizacao toroidal para d_manifold >= 4.
+
+    Interpreta os quatro primeiros eixos como dois pares circulares em torno
+    de 0.5: (x0, x1) e (x2, x3). Incentiva raio constante e cobertura angular
+    dos dois ciclos, que e a assinatura geometrica esperada de T^2 em R^4.
+
+    Args:
+        coords: [B, T, D] ou [B, H, T, D] em [0, 1].
+        target_radius: Raio alvo em torno de 0.5.
+        coverage_weight: Peso interno da penalidade de cobertura angular.
+
+    Returns:
+        Loss escalar. Retorna zero se D < 4.
+    """
+    if coords.shape[-1] < 4:
+        return torch.tensor(0.0, device=coords.device, dtype=coords.dtype)
+
+    if coords.dim() == 4:
+        flat = coords.transpose(1, 2).reshape(-1, coords.shape[-1])
+    else:
+        flat = coords.reshape(-1, coords.shape[-1])
+
+    xy = flat[:, 0:2].float() - 0.5
+    uv = flat[:, 2:4].float() - 0.5
+
+    r1 = torch.linalg.norm(xy, dim=-1)
+    r2 = torch.linalg.norm(uv, dim=-1)
+    target = torch.as_tensor(target_radius, device=flat.device, dtype=torch.float32)
+    radial = (r1 - target).pow(2).mean() + (r2 - target).pow(2).mean()
+
+    eps = 1e-6
+    c1 = xy / r1.clamp_min(eps).unsqueeze(-1)
+    c2 = uv / r2.clamp_min(eps).unsqueeze(-1)
+    # Boa cobertura angular tem media vetorial perto de zero nos dois ciclos.
+    coverage = c1.mean(dim=0).pow(2).sum() + c2.mean(dim=0).pow(2).sum()
+
+    return (radial + coverage_weight * coverage).to(coords.dtype)
+
+
 def anchor_alignment_loss(
     U: torch.Tensor,
     coords: torch.Tensor,

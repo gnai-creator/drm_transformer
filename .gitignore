@@ -38,6 +38,8 @@ Thumbs.db
 
 # Eval results (binarios grandes)
 *.npy
+eval-results/
+eval_results/
 
 # Wandb
 wandb/

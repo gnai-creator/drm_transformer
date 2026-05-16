@@ -4,7 +4,7 @@ Executa todo o pipeline de reproducao do zero:
 1. Gera dataset baseline (Wikipedia EN 10M tokens)
 2. Verifica integridade via SHA256
 3. Treina baseline small_3.5M
-4. Roda ablacoes (full, no_gravity, no_gamma, no_variable_dim)
+4. Roda ablacoes restantes (baseline entra como full)
 5. Avalia perplexity de todas as variantes
 6. Gera relatorio consolidado
 
@@ -116,7 +116,7 @@ def main():
         if args.deterministic:
             ablation_cmd.append("--deterministic")
 
-        if _run(ablation_cmd, "Rodar ablacoes (4 variantes)"):
+        if _run(ablation_cmd, "Rodar ablacoes (baseline como full)"):
             steps_ok += 1
         else:
             logger.warning("[WARN] Ablacoes falharam, continuando...")
@@ -334,7 +334,6 @@ def _compute_kpis(report: dict) -> dict:
     # --- Comparability: % experimentos com manifest ---
     manifest_dirs = [
         Path("checkpoints/baseline_3.5m"),
-        Path("checkpoints/ablations/full"),
         Path("checkpoints/ablations/no_gravity"),
         Path("checkpoints/ablations/no_gamma"),
         Path("checkpoints/ablations/no_variable_dim"),

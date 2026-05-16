@@ -1,4 +1,4 @@
-# ~1M params - Smoke test / debug [multilingual o200k_base 50K]
+# ~3.5M params - Smoke test / debug [multilingual o200k_base 50K]
 vocab_size: 50000
 d_model: 64
 n_heads: 2
@@ -39,6 +39,12 @@ lambda_metric_reg: 0.005  # era 0.001
 lambda_metric_diversity: 0.01
 lambda_ortho: 0.01
 metric_diversity_warmup_steps: 2000
+lambda_manifold_variance: 0.05
+target_manifold_std: 0.08
+lambda_torus: 0.02
+torus_target_radius: 0.35
+torus_coverage_weight: 0.25
+geometry_warmup_steps: 2000
 save_dir: checkpoints/multilingual_1m/run_2
 save_interval: 500
 log_interval: 50

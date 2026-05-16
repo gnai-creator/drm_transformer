@@ -31,6 +31,26 @@ def test_imports():
     assert True
 
 
+def test_geometry_losses():
+    """Verifica losses que impedem colapso do manifold."""
+    from drm_transformer.losses import (
+        manifold_variance_loss,
+        metric_diversity_loss,
+        metric_regularization,
+        torus_regularization_loss,
+    )
+
+    U = torch.randn(2, 8, 4, 2)
+    assert metric_regularization(U).item() >= 0
+    assert metric_diversity_loss(U).item() >= 0
+
+    collapsed = torch.full((2, 8, 4), 0.5)
+    varied = torch.rand(2, 8, 4)
+    assert manifold_variance_loss(collapsed).item() > 0
+    assert manifold_variance_loss(varied).item() >= 0
+    assert torus_regularization_loss(varied).item() >= 0
+
+
 def test_forward_pass():
     """Verifica forward pass completo (CPU, batch pequeno)."""
     from drm_transformer.config import DRMTransformerConfig
@@ -209,7 +229,9 @@ def test_config_consistency():
         "save_dir", "save_interval", "save_total_limit",
         "log_interval", "data_dir", "eval_data_dir", "lambda_metric_reg",
         "lambda_metric_diversity", "lambda_ortho", "metric_diversity_warmup_steps",
-        "target_metric_var", "weight_decay", "adam_beta1", "adam_beta2",
+        "target_metric_var", "lambda_manifold_variance", "target_manifold_std",
+        "lambda_torus", "torus_target_radius", "torus_coverage_weight",
+        "geometry_warmup_steps", "weight_decay", "adam_beta1", "adam_beta2",
         "max_grad_norm", "min_lr_ratio",
         "gradient_checkpointing", "distributed", "fsdp", "fsdp_sharding",
         "compile_model", "data_max_tokens", "num_workers", "eval_num_workers",

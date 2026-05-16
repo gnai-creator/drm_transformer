@@ -5,9 +5,9 @@ layer de attention (q_to_manifold + sigmoid), e computa G(x), gamma e mass.
 
 Uso:
     python scripts/extract_drm_vectors.py \
-        --checkpoint checkpoints/1m/final.pt \
-        --data-dir data/ \
-        --output-dir eval_results/foliation_1m \
+        --checkpoint checkpoints/baseline_3.5m/final.pt \
+        --data-dir data/baseline/val \
+        --output-dir eval_results/foliation_3.5m \
         --max-tokens 100000
 """
 
@@ -26,6 +26,31 @@ from drm_transformer.manifold import gamma_scale
 from drm_transformer.training.data import ShardedDataset
 
 logger = logging.getLogger(__name__)
+
+
+def resolve_data_dir(data_dir: str) -> Path:
+    """Resolve um diretorio de dados para uma pasta que contenha shards .npy."""
+    path = Path(data_dir)
+    if list(path.glob("*.npy")):
+        return path
+
+    candidates = [
+        path / "baseline" / "val",
+        path / "baseline" / "train",
+        path / "val",
+        path / "train",
+        path / "multilingual",
+    ]
+    for candidate in candidates:
+        if list(candidate.glob("*.npy")):
+            logger.warning(
+                "[DATA] nenhum shard direto em %s; usando %s",
+                path,
+                candidate,
+            )
+            return candidate
+
+    return path
 
 
 def load_model(checkpoint_path: str, device: str) -> DRMTransformer:
@@ -202,7 +227,8 @@ def extract_vectors(
 def main():
     parser = argparse.ArgumentParser(description="Extrai vectores DRM do modelo")
     parser.add_argument("--checkpoint", required=True, help="Caminho para checkpoint .pt")
-    parser.add_argument("--data-dir", required=True, help="Diretorio com shards tokenizados")
+    parser.add_argument("--data-dir", required=True,
+                        help="Diretorio com shards tokenizados; aceita data/ e resolve para baseline/val quando possivel")
     parser.add_argument("--output-dir", default="eval_results/foliation", help="Diretorio de saida")
     parser.add_argument("--max-tokens", type=int, default=1_000_000, help="Maximo de tokens")
     parser.add_argument("--max-seqs", type=int, default=2000, help="Maximo de sequencias")
@@ -220,12 +246,13 @@ def main():
     model = load_model(args.checkpoint, args.device)
     config = model.config
 
+    data_dir = resolve_data_dir(args.data_dir)
     dataset = ShardedDataset(
-        args.data_dir,
+        str(data_dir),
         seq_len=config.max_seq_len,
         max_tokens=args.max_tokens,
     )
-    logger.info("[DATA] %d seqs de %d tokens", len(dataset), config.max_seq_len)
+    logger.info("[DATA] %s | %d seqs de %d tokens", data_dir, len(dataset), config.max_seq_len)
 
     vectors = extract_vectors(
         model, dataset,
@@ -246,6 +273,7 @@ def main():
 
     metadata = {
         "checkpoint": args.checkpoint,
+        "data_dir": str(data_dir),
         "label": label,
         "n_vectors": len(vectors["coords"]),
         "d_manifold": config.d_manifold,

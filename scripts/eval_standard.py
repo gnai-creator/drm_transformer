@@ -8,7 +8,8 @@ Metricas:
 Uso:
     # Perplexity no baseline val set
     python scripts/eval_standard.py \
-        --checkpoint checkpoints/ablations/full/best.pt \
+        --checkpoint checkpoints/baseline_3.5m/best.pt \
+        --config configs/baselines/small_3.5M.yaml \
         --eval-data data/baseline/val
 
     # Avaliar todas as ablacoes
@@ -172,13 +173,27 @@ def eval_single(checkpoint: str, eval_data: str, config_path: str, device: str) 
 
 def eval_all_ablations(device: str) -> list:
     """Avalia todas as ablacoes que tem checkpoint."""
-    ablation_names = ["full", "no_gravity", "no_gamma", "no_variable_dim"]
+    ablations = {
+        "full": (
+            Path("checkpoints/baseline_3.5m/best.pt"),
+            Path("configs/baselines/small_3.5M.yaml"),
+        ),
+        "no_gravity": (
+            Path("checkpoints/ablations/no_gravity/best.pt"),
+            Path("configs/ablations/no_gravity.yaml"),
+        ),
+        "no_gamma": (
+            Path("checkpoints/ablations/no_gamma/best.pt"),
+            Path("configs/ablations/no_gamma.yaml"),
+        ),
+        "no_variable_dim": (
+            Path("checkpoints/ablations/no_variable_dim/best.pt"),
+            Path("configs/ablations/no_variable_dim.yaml"),
+        ),
+    }
     results = []
 
-    for name in ablation_names:
-        ckpt = Path(f"checkpoints/ablations/{name}/best.pt")
-        config_path = Path(f"configs/ablations/{name}.yaml")
-
+    for name, (ckpt, config_path) in ablations.items():
         if not ckpt.exists():
             logger.warning("[SKIP] %s: checkpoint nao encontrado", name)
             continue
