@@ -3,7 +3,7 @@
 Executa todo o pipeline de reproducao do zero:
 1. Gera dataset baseline (Wikipedia EN 10M tokens)
 2. Verifica integridade via SHA256
-3. Treina baseline small_1m
+3. Treina baseline small_3.5M
 4. Roda ablacoes (full, no_gravity, no_gamma, no_variable_dim)
 5. Avalia perplexity de todas as variantes
 6. Gera relatorio consolidado
@@ -94,13 +94,13 @@ def main():
     steps_total += 1
     baseline_cmd = [
         py, "scripts/train_distributed.py",
-        "--config", "configs/baselines/small_1m.yaml",
+        "--config", "configs/baselines/small_3.5M.yaml",
         "--seed", str(args.seed),
     ]
     if args.deterministic:
         baseline_cmd.append("--deterministic")
 
-    if _run(baseline_cmd, "Treinar baseline small_1m"):
+    if _run(baseline_cmd, "Treinar baseline small_3.5M"):
         steps_ok += 1
     else:
         logger.error("[ABORT] Falha no treino baseline")
@@ -125,7 +125,7 @@ def main():
     if not args.skip_eval:
         steps_total += 1
         if _run([py, "scripts/eval_standard.py", "--all-ablations",
-                 "--output", "checkpoints/baseline_1m/eval_results.json"],
+                 "--output", "checkpoints/baseline_3.5m/eval_results.json"],
                 "Avaliar perplexity de todas as variantes"):
             steps_ok += 1
         else:
@@ -149,7 +149,7 @@ def main():
     }
 
     # Baseline metrics
-    baseline_metrics = Path("checkpoints/baseline_1m/metrics.json")
+    baseline_metrics = Path("checkpoints/baseline_3.5m/metrics.json")
     if baseline_metrics.exists():
         with open(baseline_metrics) as f:
             report["baseline"] = json.load(f)
@@ -168,7 +168,7 @@ def main():
     _print_kpis(report["kpis"])
 
     # Salvar relatorio no diretorio do baseline
-    save_dir = Path("checkpoints/baseline_1m")
+    save_dir = Path("checkpoints/baseline_3.5m")
     save_dir.mkdir(parents=True, exist_ok=True)
 
     report_path = save_dir / "repro_report.json"
@@ -333,7 +333,7 @@ def _compute_kpis(report: dict) -> dict:
 
     # --- Comparability: % experimentos com manifest ---
     manifest_dirs = [
-        Path("checkpoints/baseline_1m"),
+        Path("checkpoints/baseline_3.5m"),
         Path("checkpoints/ablations/full"),
         Path("checkpoints/ablations/no_gravity"),
         Path("checkpoints/ablations/no_gamma"),

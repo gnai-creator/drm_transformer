@@ -13,7 +13,7 @@ Status atualizado em 2026-05-16.
 - [x] 2. `gamma_enabled: true` nao fazia efeito nos configs principais.
   - Problema: `gamma_alpha=0.0` tornava `effective_gamma=1.0`, anulando o gamma-scaling.
   - Correcao: default de `gamma_alpha` mudou para `1.0`; configs `baseline/full/no_gravity/no_variable_dim` tambem foram atualizados.
-  - Arquivos: `src/drm_transformer/config.py`, `configs/baselines/small_1m.yaml`, `configs/ablations/*.yaml`.
+  - Arquivos: `src/drm_transformer/config.py`, `configs/baselines/small_3.5M.yaml`, `configs/ablations/*.yaml`.
   - Teste: `test_gamma_alpha_changes_attention_distance`.
 
 - [x] 3. Pipeline de dados carregava shards inteiros em memoria.
@@ -37,7 +37,7 @@ Status atualizado em 2026-05-16.
 - [ ] 6. Revalidar resultados empiricos apos as correcoes.
   - Motivo: as metricas atuais em `eval-results/` e `MODEL_CARD.md` foram geradas antes das correcoes de MetricNet/gamma/dataset. Elas nao devem ser tratadas como evidencia final da arquitetura corrigida.
   - Fazer:
-    - Rodar baseline `small_1m` novamente.
+    - Rodar baseline `small_3.5M` novamente.
     - Rodar ablations `full`, `no_gamma`, `no_gravity`, `no_variable_dim`.
     - Regenerar `eval-results/`.
     - Atualizar `MODEL_CARD.md` com os novos numeros.

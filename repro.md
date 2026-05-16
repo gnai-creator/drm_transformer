@@ -70,13 +70,13 @@ python scripts/prepare_baseline_data.py
 # 2. Verificar integridade via SHA256
 python scripts/prepare_baseline_data.py --verify
 
-# 3. Treinar baseline (~1M params)
+# 3. Treinar baseline (~3.5M params)
 python scripts/train_distributed.py \
-    --config configs/baselines/small_1m.yaml \
+    --config configs/baselines/small_3.5M.yaml \
     --seed 42 --deterministic
 ```
 
-Resultado em `checkpoints/baseline_1m/`:
+Resultado em `checkpoints/baseline_3.5m/`:
 
 | Arquivo | Conteudo |
 |---------|---------|
@@ -114,7 +114,7 @@ python scripts/eval_standard.py --all-ablations
 
 # Ou avaliar um checkpoint especifico
 python scripts/eval_standard.py \
-    --checkpoint checkpoints/baseline_1m/best.pt \
+    --checkpoint checkpoints/baseline_3.5m/best.pt \
     --eval-data data/baseline/val
 
 # Apenas consolidar resultados de ablacoes ja rodadas
@@ -194,22 +194,22 @@ Para verificar:
 ```bash
 # Run 1
 python scripts/train_distributed.py \
-    --config configs/baselines/small_1m.yaml \
+    --config configs/baselines/small_3.5M.yaml \
     --seed 42 --deterministic
 
 # Mover checkpoints
-mv checkpoints/baseline_1m checkpoints_run1
+mv checkpoints/baseline_3.5m checkpoints_run1
 
 # Run 2
 python scripts/train_distributed.py \
-    --config configs/baselines/small_1m.yaml \
+    --config configs/baselines/small_3.5M.yaml \
     --seed 42 --deterministic
 
 # Comparar
 python -c "
 import torch
 a = torch.load('checkpoints_run1/final.pt', weights_only=False)
-b = torch.load('checkpoints/baseline_1m/final.pt', weights_only=False)
+b = torch.load('checkpoints/baseline_3.5m/final.pt', weights_only=False)
 for k in a['model']:
     diff = (a['model'][k] - b['model'][k]).abs().max().item()
     if diff > 0:

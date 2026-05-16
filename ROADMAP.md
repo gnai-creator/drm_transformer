@@ -31,7 +31,7 @@ Plano de desenvolvimento do DRM Transformer.
 
 - [ ] Pre-treinamento completo 20B tokens multilingual (en/pt/es/fr/de) via CulturaX
 - [x] Infraestrutura de reprodutibilidade (seed, determinismo, run manifest)
-- [x] Baseline canonico small_1m com dataset fixo e early stop
+- [x] Baseline canonico small_3.5M com dataset fixo e early stop
 - [x] Matriz de ablacoes (full, no_gravity, no_gamma, no_variable_dim)
 - [x] Script de avaliacao padronizada (perplexity, futuro: HellaSwag/ARC)
 - [x] Script unico de reproducao (repro_baseline.py)

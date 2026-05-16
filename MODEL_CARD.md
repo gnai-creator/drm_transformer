@@ -29,9 +29,9 @@ por token e dimensionalidade variavel.
 
 ## Configuracoes Disponiveis
 
-12 scaling configs de 1M a 640B parametros. Baseline canonico: small_1m (1M params).
+12 scaling configs de 1M a 640B parametros. Baseline canonico: small_3.5M (3.5M params).
 
-## Metricas (Baseline small_1m, seed=42, 10M tokens Wikipedia EN)
+## Metricas (Baseline small_3.5M, seed=42, 10M tokens Wikipedia EN)
 
 | Metrica | full | no_gravity | no_gamma | no_variable_dim |
 |---------|------|------------|----------|-----------------|
@@ -43,17 +43,17 @@ por token e dimensionalidade variavel.
 | Skip Grads | 0 | 0 | 0 | 0 |
 | Tempo | 116s | 108s | 116s | 116s |
 
-**Observacoes (baseline 1M params -- resultados preliminares):**
+**Observacoes (baseline 3.5M params -- resultados preliminares):**
 - `no_gamma` obteve melhor val PPL (556.1), sugerindo que gamma-scaling
   pode precisar de mais dados/escala para ser benefico.
 - `no_gravity` foi a variante mais rapida (92K tok/s) por evitar o compute RFF.
 - Nenhuma variante teve gradient skips, indicando estabilidade numerica.
-- Em escala tao pequena (1M params, 10M tokens), as diferencas entre variantes
+- Em escala tao pequena (3.5M params, 10M tokens), as diferencas entre variantes
   sao marginais. Resultados em escala (350M+) pendentes.
 
 ## Limitacoes
 
-- **Escala atual**: baseline testado com 1M params / 10M tokens. Resultados
+- **Escala atual**: baseline testado com 3.5M params / 10M tokens. Resultados
   em escala (350M+) ainda em andamento.
 - **Benchmarks**: HellaSwag, ARC e MMLU pendentes -- requerem modelo em escala.
 - **Linguas**: treinado em 5 linguas europeias. Performance em outras linguas

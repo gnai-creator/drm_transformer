@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 ABLATION_DIR = Path("configs/ablations")
-RESULTS_DIR = Path("checkpoints/baseline_1m")
+RESULTS_DIR = Path("checkpoints/baseline_3.5m")
 RESULTS_FILE = RESULTS_DIR / "results_ablations.md"
 
 ABLATIONS = {

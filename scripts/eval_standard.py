@@ -16,8 +16,8 @@ Uso:
 
     # Com config especifica
     python scripts/eval_standard.py \
-        --checkpoint checkpoints/baseline_1m/best.pt \
-        --config configs/baselines/small_1m.yaml \
+        --checkpoint checkpoints/baseline_3.5m/best.pt \
+        --config configs/baselines/small_3.5M.yaml \
         --eval-data data/baseline/val
 """
 

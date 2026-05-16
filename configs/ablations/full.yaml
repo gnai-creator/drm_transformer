@@ -1,5 +1,5 @@
 # Ablation: Full model (todas as features DRM ativas)
-# Identico ao baseline small_1m — serve como referencia para comparacao.
+# Identico ao baseline small_3.5M — serve como referencia para comparacao.
 
 # --- Modelo ---
 vocab_size: 50000

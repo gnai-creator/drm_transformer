@@ -17,7 +17,7 @@ Uso:
         scripts/train_distributed.py --config configs/scaling/multilingual/13b.yaml
 
     # Baseline reproduzivel
-    python scripts/train_distributed.py --config configs/baselines/small_1m.yaml --seed 42 --deterministic
+    python scripts/train_distributed.py --config configs/baselines/small_3.5M.yaml --seed 42 --deterministic
 
     # Fine-tune de backbone
     python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml \

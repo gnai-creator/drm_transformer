@@ -358,8 +358,8 @@ Ver [repro.md](repro.md) para guia detalhado e [MODEL_CARD.md](MODEL_CARD.md) pa
 python scripts/prepare_baseline_data.py                    # Dataset Wikipedia EN 10M tokens
 python scripts/prepare_baseline_data.py --verify           # Verificar SHA256
 python scripts/train_distributed.py \
-    --config configs/baselines/small_1m.yaml \
-    --seed 42 --deterministic                              # Treinar ~1M params
+    --config configs/baselines/small_3.5M.yaml \
+    --seed 42 --deterministic                              # Treinar ~3.5M params
 ```
 
 ### Ablacoes
@@ -475,7 +475,7 @@ drm_transformer/
 |
 |-- configs/
 |   |-- scaling/multilingual/  # 12 configs: 1M a 640B params
-|   |-- baselines/             # Baseline canonico (small_1m.yaml)
+|   |-- baselines/             # Baseline canonico (small_3.5M.yaml)
 |   +-- ablations/             # 4 ablacoes (full, no_gravity, no_gamma, no_variable_dim)
 |
 |-- tests/

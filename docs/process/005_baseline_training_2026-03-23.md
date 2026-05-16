@@ -6,13 +6,13 @@
 
 ## Objetivo
 
-Definir baseline canonico "small" (1M params) com dataset fixo e publico,
+Definir baseline canonico "small" (3.5M params) com dataset fixo e publico,
 pipeline de treino estavel com early stop, validacao periodica, e entregaveis
 automaticos (checkpoint, metrics.json, training_log.json).
 
 ## Alteracoes
 
-- `configs/baselines/small_1m.yaml` (novo) - Config baseline canonico
+- `configs/baselines/small_3.5M.yaml` (novo) - Config baseline canonico
 - `scripts/prepare_baseline_data.py` (novo) - Gera dataset fixo Wikipedia EN com SHA256
 - `src/drm_transformer/training/trainer.py` - Early stop, val metrics no log, metrics.json final
 - `scripts/train_distributed.py` - eval_data_dir da config YAML
