@@ -32,7 +32,18 @@ class MetricNet(nn.Module):
             nn.Linear(hidden, dim * rank),
         )
 
-        nn.init.zeros_(self.net[-1].weight)
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        """Inicializa U(x) perto de zero, mas com gradiente nao nulo."""
+        for module in self.net:
+            if isinstance(module, nn.Linear):
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                nn.init.zeros_(module.bias)
+
+        # Se U fosse exatamente zero, o termo ||U^T delta||^2 teria gradiente
+        # nulo em relacao a U. Um std pequeno mantem G(x) perto de I e treinavel.
+        nn.init.normal_(self.net[-1].weight, mean=0.0, std=1e-3)
         nn.init.zeros_(self.net[-1].bias)
 
     def forward(self, coords: torch.Tensor) -> torch.Tensor:

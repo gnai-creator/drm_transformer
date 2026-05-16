@@ -215,7 +215,7 @@ def main():
         data_dir=data_dir,
         seq_len=config.get("max_seq_len", 1024),
         batch_size=config.get("batch_size", 16),
-        max_tokens=config.get("total_tokens", 0),
+        max_tokens=config.get("data_max_tokens", 0),
         rank=rank,
         world_size=world_size,
     )

@@ -36,7 +36,7 @@ n_quad: 0
 # --- Gamma-Scaling ---
 gamma_enabled: true
 gamma_c: 2.0
-gamma_alpha: 0.0
+gamma_alpha: 1.0
 
 # --- Gravidade ---
 gravity_enabled: true

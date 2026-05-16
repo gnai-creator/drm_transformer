@@ -66,6 +66,7 @@ class DRMTransformer(nn.Module):
         self.lm_head.weight = self.token_emb.weight
 
         self.apply(self._init_weights)
+        self.metric_net.reset_parameters()
 
     def _init_weights(self, module: nn.Module) -> None:
         """Inicializa pesos com distribuicao normal (std=0.02)."""

@@ -64,6 +64,68 @@ def test_forward_pass():
     assert torch.isfinite(loss), "Loss is not finite"
 
 
+def test_metric_net_has_attention_gradient():
+    """MetricNet deve receber gradiente vindo da distancia geodesica."""
+    from drm_transformer.config import DRMTransformerConfig
+    from drm_transformer.model import DRMTransformer
+
+    config = DRMTransformerConfig(
+        vocab_size=100,
+        d_model=32,
+        n_heads=2,
+        n_layers=1,
+        d_ff=64,
+        max_seq_len=8,
+        d_manifold=4,
+        metric_hidden=8,
+        metric_rank=2,
+        gravity_enabled=False,
+        gamma_enabled=False,
+        variable_dim=False,
+    )
+    model = DRMTransformer(config)
+    input_ids = torch.randint(0, 100, (2, 8))
+    targets = torch.randint(0, 100, (2, 8))
+
+    _, loss = model(input_ids, targets)
+    loss.backward()
+
+    grad = model.metric_net.net[-1].weight.grad
+    assert grad is not None
+    assert grad.abs().sum().item() > 0
+
+
+def test_gamma_alpha_changes_attention_distance():
+    """gamma_alpha > 0 deve alterar a saida quando gamma esta ativo."""
+    from drm_transformer.config import DRMTransformerConfig
+    from drm_transformer.attention import DRMAttention
+    from drm_transformer.metric_net import MetricNet
+
+    config = DRMTransformerConfig(
+        d_model=16,
+        n_heads=2,
+        max_seq_len=8,
+        d_manifold=4,
+        metric_hidden=8,
+        metric_rank=2,
+        dropout=0.0,
+        gamma_enabled=True,
+        gamma_c=0.5,
+        gamma_alpha=1.0,
+    )
+    attn = DRMAttention(config)
+    metric_net = MetricNet(config.d_manifold, config.metric_rank, config.metric_hidden)
+    x = torch.randn(1, 6, 16)
+    anchors = torch.zeros(2, 4)
+
+    attn.gamma_alpha = 0.0
+    out_no_gamma = attn(x, metric_net, anchor_coords=anchors)
+    attn.gamma_alpha = 1.0
+    out_gamma = attn(x, metric_net, anchor_coords=anchors)
+
+    assert not torch.allclose(out_no_gamma, out_gamma)
+
+
 def test_forward_no_gravity():
     """Forward pass sem gravity."""
     from drm_transformer.config import DRMTransformerConfig
@@ -150,7 +212,7 @@ def test_config_consistency():
         "target_metric_var", "weight_decay", "adam_beta1", "adam_beta2",
         "max_grad_norm", "min_lr_ratio",
         "gradient_checkpointing", "distributed", "fsdp", "fsdp_sharding",
-        "compile_model",
+        "compile_model", "data_max_tokens",
     }
 
     config_dirs = [
@@ -203,16 +265,46 @@ def test_seed_determinism():
     assert torch.allclose(logits1, logits2, atol=1e-6), "Seed determinism failed"
 
 
+def test_sharded_dataset_reads_across_shards():
+    """ShardedDataset deve ler janelas que cruzam fronteiras de shards."""
+    from drm_transformer.training.data import ShardedDataset
+    import numpy as np
+    import shutil
+    import gc
+
+    tmp_path = Path(__file__).parent / "_tmp_sharded_dataset"
+    shutil.rmtree(tmp_path, ignore_errors=True)
+    tmp_path.mkdir(exist_ok=True)
+    try:
+        np.save(tmp_path / "a.npy", np.arange(0, 5, dtype=np.uint16))
+        np.save(tmp_path / "b.npy", np.arange(5, 10, dtype=np.uint16))
+
+        dataset = ShardedDataset(str(tmp_path), seq_len=4)
+        sample = dataset[1]
+
+        assert sample["input_ids"].tolist() == [4, 5, 6, 7]
+        assert sample["targets"].tolist() == [5, 6, 7, 8]
+        dataset.close()
+        del sample
+        del dataset
+        gc.collect()
+    finally:
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
 if __name__ == "__main__":
     tests = [
         test_imports,
         test_forward_pass,
+        test_metric_net_has_attention_gradient,
+        test_gamma_alpha_changes_attention_distance,
         test_forward_no_gravity,
         test_forward_no_gamma,
         test_forward_no_variable_dim,
         test_generate,
         test_config_consistency,
         test_seed_determinism,
+        test_sharded_dataset_reads_across_shards,
     ]
 
     passed = 0
