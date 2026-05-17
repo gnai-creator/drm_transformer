@@ -1,0 +1,45 @@
+\section{Foundations of Directional Relational Manifolds}
+\label{sec:drm_foundations}
+
+A DRM is a geometric structure in which each point $p$ has a set of active
+directions $D(p)$. Local dimensionality is defined by
+\begin{equation}
+  \dim_D(p) = |D(p)|,
+\end{equation}
+or, in linear formulations, by the effective rank of the directional set.
+Unlike a classical Riemannian manifold, where local dimension is constant, a DRM
+allows $\dim_D(p)$ to vary across the space. The basic structure is a pair
+$(M,D)$, where $M$ is topological and $D$ is a measurable assignment of active
+directions that varies continuously in an appropriate sense.
+
+The relational metric is defined only over active directions:
+\begin{equation}
+  g_p: D(p) \times D(p) \rightarrow \mathbb{R}.
+\end{equation}
+When $D(p)$ is constant, finite, and orthonormal, the structure reduces to the
+usual Riemannian case. When $D(p)$ has constant dimension and $g_p$ coincides
+with the Fisher metric over a statistical family, the DRM reduces to
+information geometry. In this sense, DRM may be seen as a generalization that
+allows variable rank and non-orthogonal modes \cite{amari_information_geometry,
+muniz_drm_v11}.
+
+In the computational setting of this work, the directional set is not
+represented explicitly as a symbolic basis, but through learned coordinates in
+a manifold of dimension $d_m$ and a low-rank metric tensor. The parameterization
+used in the model is
+\begin{equation}
+  G(x) = I + U(x) U(x)^\top,
+\end{equation}
+where $U(x) \in \mathbb{R}^{d_m \times r}$ is produced by a \emph{MetricNet}.
+This form guarantees positive semidefiniteness and keeps attention cost
+tractable, since the metric distance can be computed as
+\begin{equation}
+  d_G^2(q,k) = \|\Delta\|^2 + \|U(q)^\top \Delta\|^2,
+  \quad \Delta = q-k.
+\end{equation}
+
+The toroidal convergence theorem in the original DRM theory states that, under
+boundedness, recurrence, and structural stability assumptions, the dynamics may
+admit compact limit sets with toroidal topology \cite{muniz_drm_v11}. In the
+proposed model, this statement is not assumed as a universal guarantee; it is
+treated as an empirical target testable by persistent homology.

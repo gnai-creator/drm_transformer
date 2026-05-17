@@ -1,0 +1,33 @@
+\section{Topological Evaluation}
+\label{sec:topological_evaluation}
+
+The evaluation pipeline extracts DRM coordinates from a trained checkpoint and
+analyzes their geometry through nine stages:
+\begin{enumerate}
+  \item Voronoi tessellation by KMeans over DRM coordinates.
+  \item Local Tangent Space Analysis (LTSA) per cell.
+  \item Tangent coherence between neighboring cells.
+  \item Reeb graph construction using $\gamma$, mass, or coordinate functions.
+  \item Persistent homology with Vietoris--Rips complexes.
+  \item Null models with shuffled or uniform coordinates.
+  \item Stability analysis across KMeans restarts.
+  \item Composite foliation score.
+  \item Coordinate--cluster correlation by ANOVA.
+\end{enumerate}
+
+The main topological target is the Betti signature of a two-dimensional torus:
+\begin{equation}
+  \beta_0=1,\qquad \beta_1=2,\qquad \beta_2=1.
+\end{equation}
+In the implementation, we report the number of long bars in $H_1$ and $H_2$.
+The strict toroidal criterion is
+\begin{equation}
+  H_1=2,\quad H_2=1,\quad f_{T^2}\geq 0.60,
+\end{equation}
+where $f_{T^2}$ is the fraction of homology restarts satisfying $H_1=2$ and
+$H_2=1$.
+
+We also report \emph{Near T2}, a diagnostic quantity that counts restarts with
+$H_2=1$ and $H_1\in\{1,2,3\}$. This is not used as final validation, but it is
+useful for measuring whether failures are near the toroidal signature or
+topologically unrelated.

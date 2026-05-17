@@ -1,0 +1,37 @@
+\section{Architecture}
+\label{sec:architecture}
+
+The DRM Transformer follows the decoder-only Transformer layout: token
+embedding, positional embedding, stacked causal blocks, normalization, and an
+output language-modeling head. The main modification is inside attention.
+Instead of computing scores only by $QK^\top$, each layer projects queries and
+keys into the DRM manifold:
+\begin{equation}
+  z_q = W_q^{(m)} h,\qquad z_k = W_k^{(m)} h,
+\end{equation}
+with $z_q,z_k\in\mathbb{R}^{d_m}$.
+
+For each token, MetricNet produces the low-rank metric factor $U(z)$:
+\begin{equation}
+  U(z)=\mathrm{MetricNet}(z).
+\end{equation}
+The pairwise distance between query and key positions is then computed with the
+local diagonal/low-rank metric. The resulting attention score is
+\begin{equation}
+  a_{ts} = -\frac{1}{\tau}\tilde d(z_{q,t},z_{k,s})^2 + m_{ts},
+\end{equation}
+where $\tau$ is a learned or scheduled temperature and $m_{ts}$ is the causal
+mask.
+
+The model includes three geometric modules:
+\begin{enumerate}
+  \item \textbf{MetricNet}: learns $U(x)$ and therefore the local metric
+  $G(x)$.
+  \item \textbf{Gravity field}: adds token-mass-dependent deformation through a
+  low-cost random Fourier feature field.
+  \item \textbf{DimensionalGate}: modulates active manifold dimensions per
+  token, approximating variable local dimensionality.
+\end{enumerate}
+
+All modules are differentiable and trained jointly with the language modeling
+objective.

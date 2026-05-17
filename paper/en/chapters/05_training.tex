@@ -1,0 +1,36 @@
+\section{Training}
+\label{sec:training}
+
+The main objective is the usual autoregressive cross-entropy:
+\begin{equation}
+  \mathcal{L}_{LM}
+  = - \sum_t \log p_\theta(x_{t+1}\mid x_{\leq t}).
+\end{equation}
+Geometric regularization terms are added to prevent collapse of the learned DRM
+structure:
+\begin{equation}
+  \mathcal{L}
+  =
+  \mathcal{L}_{LM}
+  + \lambda_m \mathcal{L}_{metric}
+  + \lambda_d \mathcal{L}_{div}
+  + \lambda_o \mathcal{L}_{ortho}
+  + \lambda_v \mathcal{L}_{var}
+  + \lambda_T \mathcal{L}_{torus}.
+\end{equation}
+
+The metric regularization keeps $G(x)$ close to the identity early in training.
+The diversity loss encourages variation in $U(x)$ across positions. The
+orthogonality term prevents rank collapse, while the manifold variance term
+prevents all coordinates from contracting to a point.
+
+The toroidal loss is optional and inductive. It groups four manifold dimensions
+into two circular pairs and encourages a target radius, angular coverage,
+isotropy between cycles, and independence between the two angular variables.
+This loss is used as an experimental probe: if the toroidal signature also
+appears in weaker or annealed regimes, evidence for spontaneous topological
+organization becomes stronger.
+
+Training is implemented in \texttt{scripts/train\_distributed.py}, with support
+for single-GPU, DDP, gradient accumulation, mixed precision, checkpointing,
+deterministic seeds, and run manifests.

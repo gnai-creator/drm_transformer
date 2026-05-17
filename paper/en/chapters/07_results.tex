@@ -1,0 +1,62 @@
+\section{Preliminary Results}
+\label{sec:results}
+
+The canonical baseline has approximately 3.5 million parameters and was trained
+on English Wikipedia with fixed seed and deterministic mode. Table~\ref{tab:language}
+summarizes the language modeling results recorded in the model card.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Metric & full & no\_gravity & no\_gamma & no\_variable\_dim \\
+\midrule
+Val Loss & 6.415 & 6.385 & 6.321 & 6.428 \\
+Val PPL & 611.2 & 593.2 & 556.1 & 619.2 \\
+Train Loss & 6.344 & 5.883 & 6.252 & 6.308 \\
+Tokens/s & 86163 & 92464 & 86468 & 86360 \\
+\bottomrule
+\end{tabular}
+\caption{Preliminary results for the small\_3.5M baseline and ablations.}
+\label{tab:language}
+\end{table}
+
+At this small scale, differences between variants are still marginal. The
+\texttt{no\_gamma} variant obtained the lowest validation perplexity in some
+runs, suggesting that gamma-scaling may require more data or larger scale to
+become beneficial for language modeling.
+
+The current topological evaluation uses 99,840 DRM vectors, $K=80$ Voronoi
+cells, 1,200 points for homology, 10 restarts, long-bar ratio $\rho=0.80$, PCA3
+projection, and removal of the 10\% sparsest points before persistent homology.
+The strict toroidal criterion is
+\begin{equation}
+  H_1=2,\qquad H_2=1,\qquad f_{T^2}\geq 0.60.
+\end{equation}
+
+This strict criterion has not yet been reached. However, the controls suggest
+that training moves the DRM manifold from an initial high-genus unstable
+topology toward a homological signature compatible with a near-toroidal closed
+surface. Random initialization produced high-genus topology, $H_1=5$, $H_2=2$,
+with $f_{T^2}=0.00$ and \emph{Near T2}=0.00. After training, three independent
+seeds produced elevated \emph{Near T2}:
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Control & $H_1$ & $H_2$ & $f_{T^2}$ & Near T2 \\
+\midrule
+random init & 5 & 2 & 0.00 & 0.00 \\
+seed 42 & 2 & 1 & 0.40 & 0.70 \\
+seed 123 & 1 & 1 & 0.20 & 0.60 \\
+seed 2025 & 2 & 1 & 0.30 & 0.80 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+In two out of three trained seeds, the median topology matches $H_1=2$,
+$H_2=1$, the expected signature of $T^2$; all trained seeds show a \emph{Near
+T2} signal, while random initialization does not. Therefore, the correct
+interpretation is not ``stable torus'', but a homological signature compatible
+with a seed-robust near-toroidal closed surface. The result also suggests that
+the signature is not merely an initialization artifact, since the untrained
+control does not show a near-$T^2$ signal.

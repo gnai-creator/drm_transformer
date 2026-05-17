@@ -1,0 +1,28 @@
+\section{Relativistic-Driven Dynamics}
+\label{sec:relativistic_dynamics}
+
+The DRM dynamics used as theoretical inspiration introduces a nonlinear flow
+controlled by a relativistic scale parameter \cite{muniz_relativistic_drm}. In
+this formulation, a local velocity norm $v$ and a limit constant $c$ define a
+Lorentz-like factor
+\begin{equation}
+  \gamma(v) = \frac{1}{\sqrt{1-\|v\|^2/c^2}}.
+\end{equation}
+As $\|v\|$ approaches $c$, the scale factor grows, amplifying the geometric
+effect of fast transitions while keeping the system bounded by the velocity
+limit.
+
+In the DRM Transformer, we do not simulate a physical spacetime. The Lorentz
+factor is used as a differentiable modulation of attention distances. Let
+$q_t$ and $k_s$ be manifold coordinates of a query and a key. We estimate a
+local speed from coordinate differences and compute
+\begin{equation}
+  \tilde d(q_t,k_s) = \gamma^\alpha d_G(q_t,k_s),
+\end{equation}
+where $\alpha$ controls the strength of gamma-scaling. The score used in
+attention is proportional to $-\tilde d^2$.
+
+This mechanism has two intended effects. First, it makes fast semantic
+transitions more expensive, acting as a geometric stabilizer. Second, it offers
+a controlled way to introduce nonlinear scaling into the attention field
+without changing the autoregressive interface of the model.

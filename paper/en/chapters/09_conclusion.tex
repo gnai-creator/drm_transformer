@@ -1,0 +1,31 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We introduced the DRM Transformer, a decoder-only Transformer that replaces
+dot-product attention with geodesic attention over a learned Directional
+Relational Manifold. The architecture combines a low-rank MetricNet,
+gravitational deformation, relativistic gamma-scaling, and variable
+dimensionality. Based on the DRM and relativistic dynamics papers, we
+implemented a trainable neural version of emergent dimensionality and toroidal
+structure.
+
+The most important result so far is the observation of a seed-robust
+homological signature compatible with a near-toroidal closed surface in the
+small\_3.5M baseline. The controls suggest that training moves the DRM manifold
+from an initial high-genus unstable topology toward this signature: in two out
+of three trained seeds, the median topology matches $H_1=2$, $H_2=1$, the
+expected signature of $T^2$; all trained seeds show a \emph{Near T2} signal,
+while random initialization does not. This does not complete validation of the
+method, since the strict criterion $f_{T^2}\geq 0.60$ has not been reached, but
+it demonstrates that DRM geometry can be operationalized in language models and
+evaluated with objective topological tools.
+
+Future work includes scaling the model, testing ablations at 50M, 350M, and
+1B+ parameters, comparing against standard attention under equivalent compute
+budgets, and studying the relation between DRM topology and perplexity. A
+central validation point will be comparing four regimes: explicit torus, torus
+with annealing to zero, generic geometry without toroidal target, and absence
+of toroidal regularization. If regimes without a toroidal target maintain
+$H_1=2$, $H_2=1$ with higher stability at scale, evidence for topological
+emergence will be substantially stronger than in the explicitly prescriptive
+regime.

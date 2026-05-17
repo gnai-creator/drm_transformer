@@ -1,0 +1,37 @@
+\section{Limitations}
+\label{sec:limitations}
+
+The DRM Transformer is a research prototype. The current baseline is small,
+approximately 3.5 million parameters, and was trained on few tokens compared
+with modern language models. Therefore, perplexity results should not be
+directly compared with production models.
+
+Topological validation depends on evaluation choices: number of Voronoi seeds,
+homology subsample size, long-bar ratio, PCA projection, density filtering, and
+number of restarts. The strict criterion $f_{T^2}\geq 0.60$ reduces false
+positives, but remains an experimental convention. In the current results, the
+trained model exhibits a near-stable toroidal signature, but does not reach that
+strict threshold.
+
+Toroidal losses are inductive: they help induce $T^2$ in dimension four, but
+they may also compete with the language loss. The fact that controls without
+toroidal regularization still show some near-$T^2$ signal suggests that the
+architecture also contributes to the structure, but separating learned
+topology, induced topology, and TDA artifacts requires further ablations.
+
+In addition, the local geometry remains thick in 4D across several runs. The
+toroidal signature appears more clearly under PCA3 homology with density
+filtering, and not as a fully stable signature in the raw 4D embedding. At
+larger model scales, geometric loss weights will likely need to be rescaled.
+
+Finally, the connection with relativistic physics is formal and analogical. The
+Lorentz factor is used as mathematical inspiration for scale control; the model
+does not claim to implement a new physical theory.
+
+Similarly, the discussion of open geometry, negotiation, and AI safety is a
+conceptual motivation, not an operational guarantee. The DRM Transformer does
+not prove that an AI will be safe because it has closed topology, nor does it
+replace behavioral evaluation, governance, interpretability, or external
+control. The contribution here is a measurable hypothesis: if some epistemic and
+semantic conflicts appear as geometric structures, then they can be compared
+through ablations, persistent homology, and initialization controls.

@@ -1,0 +1,23 @@
+\begin{abstract}
+This paper introduces the \emph{DRM Transformer}, a decoder-only Transformer
+whose internal attention space is equipped with a \emph{Directional Relational
+Manifold} (DRM) geometry. Instead of relying only on dot products in a fixed
+Euclidean space, the model projects queries and keys into a low-dimensional
+relational manifold, learns a point-dependent metric tensor, applies
+gravitational deformations through token mass, and modulates distances through
+a Lorentz-like relativistic factor. The implementation preserves the
+autoregressive interface of a language model, while replacing attention scores
+with learned geodesic proximity. We also introduce geometric losses to prevent
+manifold collapse and to investigate toroidal signatures in dimension four. In
+a reproducible baseline with approximately 3.5 million parameters trained on
+English Wikipedia, topological analysis with Voronoi cells, LTSA, and
+persistent homology suggests that training moves the DRM manifold from an
+initial high-genus unstable topology toward a homological signature compatible
+with a near-toroidal closed surface. In two out of three trained seeds, the
+median topology matches $H_1=2$, $H_2=1$, the expected signature of $T^2$; all
+trained seeds show a \emph{Near T2} signal, while random initialization does
+not. The strict criterion $f_{T^2}\geq 0.60$ has not yet been reached; therefore
+we describe the result as preliminary evidence of a near-toroidal signature,
+not as final validation of a stable torus. We discuss the mathematical
+formulation, architecture, preliminary results, and limitations of the method.
+\end{abstract}

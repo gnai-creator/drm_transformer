@@ -1,30 +1,55 @@
-# ~50M params - GPT-2 Small / single GPU training [multilingual o200k_base 50K]
+# ~50M params - DRM scaling PoC [multilingual/Wikipedia o200k_base 50K]
+# Objetivo: testar se a assinatura near-toroidal do 3.5M estabiliza em escala.
+# Recomendado: 1x RTX 4090/24GB ou GPU equivalente.
+#
+# Dados:
+#   python scripts/prepare_multilingual_data.py --source wikipedia --output-dir data/multilingual --max-tokens 300000000 --vocab-size 50000 --langs en,pt
+#   python scripts/prepare_multilingual_data.py --output-dir data/multilingual --vocab-size 50000 --finalize --clean-raw
+#
+# Treino:
+#   python scripts/train_distributed.py --config configs/scaling/multilingual/50m.yaml --data-dir data/multilingual --seed 42 --deterministic --device cuda
+#
+# Avaliacao topologica:
+#   python scripts/extract_drm_vectors.py --checkpoint checkpoints/multilingual_50m/run_1/final.pt --data-dir data/multilingual --output-dir eval-results/foliation_50m --max-tokens 100000 --device cuda
+#   python scripts/voronoi_foliation_drm.py --coords eval-results/foliation_50m/drm_coords.npy --G-diag eval-results/foliation_50m/drm_G_diag.npy --gamma eval-results/foliation_50m/drm_gamma.npy --output-dir eval-results/foliation_50m --n-seeds 80 --homology-points 1200 --homology-long-bar-ratio 0.80 --homology-restarts 10 --homology-projection pca3 --homology-density-quantile 0.1
+
+# --- Modelo ---
 vocab_size: 50000
 d_model: 512
 n_heads: 8
 n_layers: 8
-d_ff: 2048
-max_seq_len: 1024
+d_ff: 1280
+max_seq_len: 512
 dropout: 0.1
 bias: false
-batch_size: 16
-learning_rate: 0.0006
+
+# --- Dados ---
+data_dir: data/multilingual
+eval_data_dir: data/multilingual
+
+# --- Treino ---
+batch_size: 4
+learning_rate: 0.0005
 warmup_steps: 1000
-total_tokens: 2_000_000_000
+total_tokens: 300_000_000
 mixed_precision: bf16
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 16
+gradient_checkpointing: false
+
+# --- Avaliacao ---
 eval_interval: 500
-early_stopping_patience: 8
+early_stop_patience: 20
 
 # --- Manifold DRM ---
-d_manifold: 12
-metric_hidden: 48
+d_manifold: 8
+metric_hidden: 64
 metric_rank: 4
 n_quad: 0
 
 # --- Gamma-Scaling ---
 gamma_enabled: true
-gamma_c: 3.46
+gamma_c: 3.0
+gamma_alpha: 0.5
 
 # --- Gravidade ---
 gravity_enabled: true
@@ -37,30 +62,39 @@ variable_dim: true
 
 # --- Losses DRM ---
 lambda_metric_reg: 0.001
-lambda_metric_diversity: 0.05
+lambda_metric_diversity: 0.02
 lambda_ortho: 0.01
-metric_diversity_warmup_steps: 6000
 lambda_manifold_variance: 0.05
 target_manifold_std: 0.08
-lambda_intrinsic_dim: 0.0
+
+# Mantem o alvo 2D do 3.5M, mas com pesos levemente mais suaves.
+lambda_intrinsic_dim: 0.015
 target_intrinsic_dim: 2.0
-lambda_coverage: 0.0
+lambda_coverage: 0.008
 target_coverage_std: 0.20
-lambda_torus: 0.02
-lambda_torus_start: 0.02
-lambda_torus_end: 0.02
+
+# Pressao toroidal moderada: suficiente para testar estabilidade,
+# sem declarar emergencia espontanea.
+lambda_torus: 0.05
+lambda_torus_start: 0.05
+lambda_torus_end: 0.0
 torus_target_radius: 0.35
-torus_radial_weight: 1.0
-torus_coverage_weight: 0.25
-torus_isotropy_weight: 0.5
-torus_independence_weight: 0.5
-torus_harmonic_weight: 0.5
-geometry_warmup_steps: 6000
-geometry_schedule_start_step: 0
-geometry_schedule_end_step: 0
+torus_radial_weight: 4.0
+torus_coverage_weight: 0.60
+torus_isotropy_weight: 0.85
+torus_independence_weight: 0.30
+torus_harmonic_weight: 0.20
+
+# 300M tokens / (batch 4 * seq 512 * accum 16) ~= 9155 optimizer steps.
+geometry_warmup_steps: 1000
+geometry_schedule_start_step: 1000
+geometry_schedule_end_step: 9155
+metric_diversity_warmup_steps: 1000
+target_metric_var: 0.001
+
+# --- Checkpointing ---
 save_dir: checkpoints/multilingual_50m/run_1
 save_interval: 500
-log_interval: 50
-target_metric_var: 0.001
 save_total_limit: 5
+log_interval: 25
 temperature_min: 0.5
