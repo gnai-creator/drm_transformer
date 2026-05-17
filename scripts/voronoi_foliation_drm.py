@@ -372,6 +372,8 @@ def compute_homology(
     n_restarts: int = 5,
     normalize: bool = True,
     long_bar_ratio: float = 0.5,
+    projection: str = "none",
+    density_quantile: float = 0.0,
     random_seed: int = 42,
 ) -> dict:
     """Persistent homology (H0, H1, H2) via ripser.
@@ -384,6 +386,8 @@ def compute_homology(
         n_restarts: Numero de subsamples independentes para estabilidade.
         normalize: Padronizar coordenadas antes do ripser.
         long_bar_ratio: Barra longa se persistence >= ratio * max_persistence.
+        projection: "none", "pca2" ou "pca3" antes do ripser.
+        density_quantile: Fracao esparsa removida antes do ripser.
         random_seed: Seed base dos subsamples.
 
     Returns:
@@ -406,15 +410,55 @@ def compute_homology(
         std = coords_work.std(axis=0, keepdims=True)
         coords_work = (coords_work - mean) / np.maximum(std, 1e-6)
 
+    g_work = G_diag
+    if density_quantile > 0:
+        # Remove a cauda mais esparsa da nuvem. Ex.: 0.1 mantem os 90%
+        # pontos mais densos, medidos por distancia ao 8o vizinho.
+        n_neighbors = min(8, max(len(coords_work) - 1, 1))
+        if n_neighbors > 1:
+            nbrs = NearestNeighbors(n_neighbors=n_neighbors + 1).fit(coords_work)
+            distances, _ = nbrs.kneighbors(coords_work)
+            density_radius = distances[:, -1]
+            cutoff = np.quantile(density_radius, 1.0 - density_quantile)
+            keep = density_radius <= cutoff
+            logger.info(
+                "  density filter: keep=%d/%d (drop %.1f%% sparsest)",
+                int(keep.sum()), len(keep), 100.0 * density_quantile,
+            )
+            coords_work = coords_work[keep]
+            if g_work is not None:
+                g_work = g_work[keep]
+
+    pca_explained = None
+    if projection != "none":
+        target_dim = {"pca2": 2, "pca3": 3}[projection]
+        if coords_work.shape[1] > target_dim:
+            x = coords_work - coords_work.mean(axis=0, keepdims=True)
+            _, s, vt = np.linalg.svd(x, full_matrices=False)
+            coords_work = (x @ vt[:target_dim].T).astype(np.float32)
+            total_var = float((s ** 2).sum())
+            if total_var > 0:
+                pca_explained = [float(v) for v in ((s[:target_dim] ** 2) / total_var)]
+            logger.info(
+                "  projection=%s, explained=%s",
+                projection,
+                [round(v, 4) for v in pca_explained] if pca_explained else [],
+            )
+        else:
+            logger.info("  projection=%s skipped: dim <= target", projection)
+        if g_work is not None:
+            logger.info("  G_diag ignored for projected homology")
+            g_work = None
+
     def _run_once(seed: int) -> tuple[dict, list]:
         N = len(coords_work)
         if N > max_points:
             idx = np.random.default_rng(seed).choice(N, max_points, replace=False)
             pts = coords_work[idx]
-            g_diag = G_diag[idx] if G_diag is not None else None
+            g_diag = g_work[idx] if g_work is not None else None
         else:
             pts = coords_work
-            g_diag = G_diag
+            g_diag = g_work
 
         # Distancia: se temos G_diag, usar Mahalanobis diagonal.
         if g_diag is not None:
@@ -526,6 +570,10 @@ def compute_homology(
         "t2_valid": t2_valid,
         "t2_stable_fraction": t2_stable_fraction,
         "normalization": "zscore" if normalize else "none",
+        "projection": projection,
+        "pca_explained_variance": pca_explained,
+        "density_quantile": density_quantile,
+        "n_points_after_filter": int(len(coords_work)),
         "long_bar_rule": {
             "type": "relative_to_max_persistence",
             "ratio": long_bar_ratio,
@@ -721,10 +769,27 @@ def main():
     parser.add_argument("--homology-points", type=int, default=1500)
     parser.add_argument("--homology-restarts", type=int, default=5)
     parser.add_argument("--homology-long-bar-ratio", type=float, default=0.5)
+    parser.add_argument(
+        "--homology-projection",
+        choices=["none", "pca2", "pca3"],
+        default="none",
+        help="Projeta coords antes da homologia persistente",
+    )
+    parser.add_argument(
+        "--homology-density-quantile",
+        type=float,
+        default=0.0,
+        help="Remove esta fracao dos pontos mais esparsos antes da homologia",
+    )
     parser.add_argument("--no-homology-normalize", action="store_true")
     parser.add_argument("--use-gamma-distance", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
+
+    if not (0.0 < args.homology_long_bar_ratio <= 1.0):
+        raise SystemExit("--homology-long-bar-ratio deve estar em (0, 1].")
+    if not (0.0 <= args.homology_density_quantile < 1.0):
+        raise SystemExit("--homology-density-quantile deve estar em [0, 1).")
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -796,6 +861,8 @@ def main():
         n_restarts=args.homology_restarts,
         normalize=not args.no_homology_normalize,
         long_bar_ratio=args.homology_long_bar_ratio,
+        projection=args.homology_projection,
+        density_quantile=args.homology_density_quantile,
     )
     results["homology"] = homology
 
@@ -829,6 +896,8 @@ def main():
         "homology_restarts": args.homology_restarts,
         "homology_normalize": not args.no_homology_normalize,
         "homology_long_bar_ratio": args.homology_long_bar_ratio,
+        "homology_projection": args.homology_projection,
+        "homology_density_quantile": args.homology_density_quantile,
         "use_gamma_distance": args.use_gamma_distance,
         "n_vectors": len(coords),
         "d_manifold": D,

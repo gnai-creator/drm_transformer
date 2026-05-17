@@ -1,273 +1,174 @@
-# Guia de Reprodutibilidade
+# Reprodutibilidade
 
-Passo-a-passo para reproduzir resultados do DRM Transformer do zero.
+Guia curto para reproduzir o baseline DRM Transformer 3.5M, as ablacoes e a
+analise de foliacao Voronoi.
 
 ## 1. Ambiente
 
 ```bash
-# Python 3.10+ (testado com 3.12.3), CUDA 12.8+
-python --version   # 3.12.3
-nvidia-smi         # CUDA 12.8
-
-# Clone e setup
-git clone https://github.com/gnai-creator/drm_transformer.git
-cd drm_transformer
-
-# Ambiente virtual
 python -m venv .venv
 source .venv/bin/activate
-
-# Dependencias exatas (reprodutibilidade)
 pip install -r requirements-lock.txt
-
-# OU dependencias minimas (pode variar)
-pip install -e ".[all]"
 ```
 
-### Versoes Criticas
+No PowerShell, ative com:
 
-| Pacote | Versao Testada |
-|--------|---------------|
-| Python | 3.12.3 |
-| PyTorch | 2.10.0+cu128 |
-| CUDA | 12.8 |
-| cuDNN | 91002 |
-| NumPy | 2.4.3 |
-
-## 2. Dados
-
-Para testes rapidos (minutos em vez de horas):
-
-```bash
-python scripts/prepare_multilingual_data.py \
-    --source wikipedia \
-    --output-dir data/multilingual \
-    --max-tokens 10000000 \
-    --vocab-size 50000 \
-    --langs en
+```powershell
+.\.venv\Scripts\Activate.ps1
 ```
 
-## 3. Baseline Canonico (reprodutibilidade minima)
-
-Pipeline completo para validar o setup -- qualquer pessoa pode rodar:
+Para CUDA, instale PyTorch com wheel CUDA antes de rodar os treinos. Verifique:
 
 ```bash
-# 1. Gerar dataset baseline (Wikipedia EN, 10M tokens, publico, sem auth)
+python -c "import torch; print(torch.cuda.is_available()); print(torch.version.cuda)"
+```
+
+## 2. Experimento Completo
+
+Um comando prepara/verifica os dados publicos, treina o baseline `full`, treina
+as ablacoes, extrai vetores DRM e roda Voronoi em cada variante:
+
+```bash
+python scripts/run_ablation_foliation.py --prepare-data --prepare-max-tokens 10000000 --seed 42 --deterministic --device cuda --n-seeds 80 --homology-points 1200 --homology-long-bar-ratio 0.75 --homology-restarts 5
+```
+
+O dataset vem da Wikipedia publica e nao exige login no Hugging Face.
+
+O `full` usa `configs/baselines/small_3.5M.yaml` e salva em
+`checkpoints/baseline_3.5m/`. As outras variantes usam `configs/ablations/` e
+salvam em `checkpoints/ablations/<ablacao>/`.
+
+Se nao houver CUDA, use `--device cpu` ou remova o argumento para `auto`.
+
+O script pula etapas ja prontas por padrao. Para continuar uma rodada longa:
+
+```bash
+python scripts/run_ablation_foliation.py --skip-train --device cuda
+```
+
+Para rodar so algumas variantes:
+
+```bash
+python scripts/run_ablation_foliation.py --only full,annealed_torus,generic_geometry --device cuda
+```
+
+Resumo final:
+
+- `eval-results/ablations_foliation/summary.md`
+- `eval-results/ablations_foliation/summary.json`
+- `eval-results/ablations_foliation/<ablacao>/foliation_results.json`
+
+Saidas principais do baseline:
+
+- `checkpoints/baseline_3.5m/final.pt`
+- `checkpoints/baseline_3.5m/best.pt`
+- `checkpoints/baseline_3.5m/run_manifest.json`
+- `checkpoints/baseline_3.5m/metrics.json`
+
+### Comandos opcionais
+
+Treinar apenas o baseline, sem ablações:
+
+```bash
+python scripts/train_distributed.py \
+  --config configs/baselines/small_3.5M.yaml \
+  --seed 42 \
+  --deterministic \
+  --device cuda
+```
+
+Preparar dados manualmente:
+
+```bash
 python scripts/prepare_baseline_data.py
-
-# 2. Verificar integridade via SHA256
+python scripts/prepare_baseline_data.py --max-tokens 20000000
 python scripts/prepare_baseline_data.py --verify
-
-# 3. Treinar baseline (~3.5M params)
-python scripts/train_distributed.py \
-    --config configs/baselines/small_3.5M.yaml \
-    --seed 42 --deterministic
 ```
 
-Resultado em `checkpoints/baseline_3.5m/`:
+## 3. Foliacao Manual
 
-| Arquivo | Conteudo |
-|---------|---------|
-| `run_manifest.json` | Git hash, config, hardware, deps |
-| `training_log.json` | Train loss + val loss + ppl por step |
-| `metrics.json` | Sumario final (best_val_loss, tokens/s, etc.) |
-| `final.pt` | Checkpoint do ultimo step |
-| `best.pt` | Checkpoint com menor val_loss |
-
-## 4. Ablacoes e Avaliacao
-
-```bash
-# Rodar as ablacoes restantes.
-# O full vem do baseline ja treinado em checkpoints/baseline_3.5m/.
-python scripts/run_ablations.py --seed 42 --deterministic
-
-# Avaliar perplexity de todas as variantes, incluindo o baseline como full
-python scripts/eval_standard.py --all-ablations
-
-# Ou avaliar um checkpoint especifico
-python scripts/eval_standard.py \
-    --checkpoint checkpoints/baseline_3.5m/best.pt \
-    --eval-data data/baseline/val
-
-# Apenas consolidar resultados ja rodados, reaproveitando o baseline como full
-python scripts/run_ablations.py --collect-only
-```
-
-Resultado: `checkpoints/baseline_3.5m/results_ablations.md` com tabela
-comparativa + `checkpoints/baseline_3.5m/results_ablations.json`.
-
-| Variante | Gravity | Gamma | VarDim | Descricao |
-|----------|---------|-------|--------|-----------|
-| full | Y | Y | Y | Modelo completo |
-| no_gravity | N | Y | Y | Sem campo gravitacional |
-| no_gamma | Y | N | Y | Sem gamma-scaling (Lorentz) |
-| no_variable_dim | Y | Y | N | Sem DimensionalGate |
-
-### O que `--seed 42` faz
-
-Fixa todas as fontes de aleatoriedade:
-- `random.seed(42)`
-- `PYTHONHASHSEED=42`
-- `numpy.random.seed(42)`
-- `torch.manual_seed(42)`
-- `torch.cuda.manual_seed_all(42)`
-
-### O que `--deterministic` faz
-
-Ativa flags de determinismo no PyTorch:
-- `torch.backends.cudnn.deterministic = True`
-- `torch.backends.cudnn.benchmark = False`
-- `torch.use_deterministic_algorithms(True, warn_only=True)`
-- `CUBLAS_WORKSPACE_CONFIG=:4096:8`
-
-**Nota:** modo deterministico pode reduzir performance em ~5-10%.
-
-## 5. Run Manifest
-
-A cada treino, um `run_manifest.json` e salvo automaticamente no diretorio
-de checkpoints com:
-
-```json
-{
-  "timestamp": "2026-03-23T...",
-  "seed": 42,
-  "config_path": "configs/scaling/multilingual/15m.yaml",
-  "config": { "...config final resolvida..." },
-  "config_hash": "a1b2c3d4e5f6g7h8",
-  "git": {
-    "commit": "abc123...",
-    "branch": "main",
-    "dirty": "False"
-  },
-  "hardware": {
-    "hostname": "...",
-    "gpu_name": "NVIDIA RTX ...",
-    "gpu_count": 1,
-    "gpu_memory_gb": 24.0,
-    "cpu_count": 16,
-    "ram_gb": 64.0
-  },
-  "dependencies": {
-    "python": "3.12.3",
-    "torch": "2.10.0+cu128",
-    "cuda": "12.8",
-    "numpy": "2.4.3"
-  }
-}
-```
-
-## 6. Criterio de Sucesso
-
-Duas execucoes com o mesmo comando, seed e hardware devem produzir:
-- **Loss final**: dentro de 1% de tolerancia
-- **Checkpoints**: pesos identicos em modo `--deterministic`
-
-Para verificar:
-
-```bash
-# Run 1
-python scripts/train_distributed.py \
-    --config configs/baselines/small_3.5M.yaml \
-    --seed 42 --deterministic
-
-# Mover checkpoints
-mv checkpoints/baseline_3.5m checkpoints_run1
-
-# Run 2
-python scripts/train_distributed.py \
-    --config configs/baselines/small_3.5M.yaml \
-    --seed 42 --deterministic
-
-# Comparar
-python -c "
-import torch
-a = torch.load('checkpoints_run1/final.pt', weights_only=False)
-b = torch.load('checkpoints/baseline_3.5m/final.pt', weights_only=False)
-for k in a['model']:
-    diff = (a['model'][k] - b['model'][k]).abs().max().item()
-    if diff > 0:
-        print(f'{k}: max_diff={diff:.2e}')
-print('PASS' if all(
-    (a['model'][k] - b['model'][k]).abs().max().item() < 1e-6
-    for k in a['model']
-) else 'FAIL')
-"
-```
-
-## 7. KPIs de Acompanhamento
-
-O `repro_baseline.py` gera um dashboard de KPIs automaticamente no final:
-
-| KPI | Metrica | Fonte |
-|-----|---------|-------|
-| **Reprodutibilidade** | Desvio de PPL entre runs com mesma seed | 2 runs + comparacao |
-| **Confiabilidade** | % de steps que terminam sem erro | `repro_report.json` |
-| **Custo** | Tokens/s e tempo total por experimento | `metrics.json` |
-| **Qualidade** | Melhor PPL + spread entre ablacoes | `metrics.json` + `results_ablations.json` |
-| **Comparabilidade** | % de experimentos com manifest completo | `run_manifest.json` |
-
-Exemplo de output:
-
-```
-  KPI DASHBOARD
-  ============================================================
-
-  RELIABILITY
-    Success rate:    100.0% (5/5 steps)
-
-  COST
-    Tokens/s:        45000
-    Total time:      12.3 min
-
-  QUALITY
-    Baseline PPL:    125.3
-    Best variant:    full (PPL=125.3)
-    Worst variant:   no_gravity (PPL=142.1)
-    PPL spread:      16.8
-
-  COMPARABILITY
-    Manifest:        100.0% (5/5)
-    Complete:        100.0%
-
-  REPRODUCIBILITY
-    PPL deviation:   (pendente -- rodar 2x com mesma seed)
-```
-
-Os KPIs tambem ficam salvos em `repro_report.json` sob a chave `"kpis"`.
-
-## 8. Analise de Foliacao
-
-Depois de treinar um checkpoint novo com as losses geometricas, extraia os
-vetores DRM e rode a avaliacao de folheacao:
+Para avaliar apenas o baseline ja treinado:
 
 ```bash
 python scripts/extract_drm_vectors.py \
-    --checkpoint checkpoints/baseline_3.5m/final.pt \
-    --data-dir data/ \
-    --output-dir eval-results/foliation_3.5m \
-    --max-tokens 100000
+  --checkpoint checkpoints/baseline_3.5m/final.pt \
+  --data-dir data \
+  --output-dir eval-results/foliation_3.5m \
+  --max-tokens 100000 \
+  --device cuda
 
 python scripts/voronoi_foliation_drm.py \
-    --coords eval-results/foliation_3.5m/drm_coords.npy \
-    --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
-    --gamma eval-results/foliation_3.5m/drm_gamma.npy \
-    --output-dir eval-results/foliation_3.5m \
-    --n-seeds 80 \
-    --homology-points 1200 \
-    --homology-long-bar-ratio 0.75 \
-    --homology-restarts 5
+  --coords eval-results/foliation_3.5m/drm_coords.npy \
+  --G-diag eval-results/foliation_3.5m/drm_G_diag.npy \
+  --gamma eval-results/foliation_3.5m/drm_gamma.npy \
+  --output-dir eval-results/foliation_3.5m \
+  --n-seeds 80 \
+  --homology-points 1200 \
+  --homology-long-bar-ratio 0.75 \
+  --homology-restarts 5
 ```
 
-O alvo topologico `H1=2, H2=1` so e considerado validado quando aparece de
-forma estavel nos subsamples de homologia (`t2_stable_fraction >= 0.6`).
+## 4. Criterio Atual
 
-## 9. Limitacoes Conhecidas
+A topologia toroidal e considerada validada quando a homologia persistente
+retorna:
 
-- **Multi-GPU**: NCCL pode introduzir nao-determinismo em reducoes.
-  Para determinismo total, use single GPU.
-- **`torch.use_deterministic_algorithms`**: algumas ops CUDA nao tem
-  implementacao deterministica. O `warn_only=True` emite warning em vez
-  de erro nestes casos.
-- **Hardware diferente**: resultados reproduziveis exigem mesmo modelo
-  de GPU. GPUs diferentes (ex: A100 vs RTX 4090) podem dar resultados
-  ligeiramente distintos devido a diferencias em FP.
+- `H1=2`
+- `H2=1`
+- `T2 stable >= 0.60`
+
+Resultado de referencia observado no baseline 3.5M:
+
+```text
+topology=torus T^2 (stable)
+H1=2
+H2=1
+T2 stable=0.60
+ARI=0.7959
+F=0.4410
+```
+
+## 5. Ablacoes de Treino
+
+Para gerar apenas a tabela de metricas de treino/perplexidade:
+
+```bash
+python scripts/run_ablations.py --seed 42 --deterministic
+python scripts/eval_standard.py --all-ablations
+```
+
+Resultados:
+
+- `checkpoints/baseline_3.5m/results_ablations.md`
+- `checkpoints/baseline_3.5m/results_ablations.json`
+
+## 6. Controles Topologicos
+
+Para consolidar random init, baseline, ablações e checkpoints intermediarios em
+uma tabela unica:
+
+```bash
+python scripts/topology_controls.py --device cuda --force-foliation
+```
+
+Saidas:
+
+- `eval-results/topology_controls/topology_controls.md`
+- `eval-results/topology_controls/topology_controls.json`
+
+Para treinar e comparar seeds adicionais:
+
+```bash
+python scripts/topology_controls.py --train-seeds 42,123,2025 --device cuda --deterministic
+```
+
+Para treinar completo:
+```bash
+python scripts/topology_controls.py --train-seeds 42,123,2025 --device cuda --deterministic --force-foliation
+```
+
+## 7. Notas
+
+- Use a mesma seed, config e hardware para comparar runs.
+- Multi-GPU pode introduzir diferencas pequenas por reducoes numericas.
+- `--deterministic` melhora reprodutibilidade, mas pode reduzir performance.

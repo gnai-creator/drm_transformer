@@ -39,6 +39,9 @@ ABLATIONS = {
     "no_gravity": "Sem campo gravitacional",
     "no_gamma": "Sem gamma-scaling (Lorentz)",
     "no_variable_dim": "Sem DimensionalGate",
+    "no_torus": "Sem regularizacao toroidal explicita",
+    "annealed_torus": "Torus forte no inicio, anneal ate zero",
+    "generic_geometry": "Dimensao/cobertura genericas, sem alvo toroidal",
 }
 
 
@@ -167,6 +170,9 @@ def generate_table(results: list) -> str:
         "no_gravity": (False, True, True),
         "no_gamma": (True, False, True),
         "no_variable_dim": (True, True, False),
+        "no_torus": (True, True, True),
+        "annealed_torus": (True, True, True),
+        "generic_geometry": (True, True, True),
     }
 
     for r in results:

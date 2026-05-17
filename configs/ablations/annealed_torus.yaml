@@ -1,5 +1,5 @@
-# Ablation: sem dimensionalidade variavel (DimensionalGate)
-# Diferenca do full: variable_dim=false
+# Ablation: annealed_torus
+# Variante para avaliar emergencia topologica sem depender sempre da loss toroidal explicita.
 
 # --- Modelo ---
 vocab_size: 50000
@@ -45,7 +45,7 @@ gravity_n_rff: 64
 n_anchors: 6
 
 # --- Dimensionalidade variavel ---
-variable_dim: false
+variable_dim: true
 
 # --- Losses DRM ---
 lambda_metric_reg: 0.001
@@ -53,13 +53,13 @@ lambda_metric_diversity: 0.01
 lambda_ortho: 0.01
 lambda_manifold_variance: 0.05
 target_manifold_std: 0.08
-lambda_intrinsic_dim: 0.0
+lambda_intrinsic_dim: 0.02
 target_intrinsic_dim: 2.0
-lambda_coverage: 0.0
+lambda_coverage: 0.02
 target_coverage_std: 0.20
-lambda_torus: 0.02
-lambda_torus_start: 0.02
-lambda_torus_end: 0.02
+lambda_torus: 0.07
+lambda_torus_start: 0.07
+lambda_torus_end: 0.0
 torus_target_radius: 0.35
 torus_radial_weight: 1.0
 torus_coverage_weight: 0.25
@@ -67,13 +67,13 @@ torus_isotropy_weight: 0.5
 torus_independence_weight: 0.5
 torus_harmonic_weight: 0.5
 geometry_warmup_steps: 500
-geometry_schedule_start_step: 0
-geometry_schedule_end_step: 0
+geometry_schedule_start_step: 500
+geometry_schedule_end_step: 2441
 metric_diversity_warmup_steps: 500
 target_metric_var: 0.001
 
 # --- Checkpointing ---
-save_dir: checkpoints/ablations/no_variable_dim
+save_dir: checkpoints/ablations/annealed_torus
 save_interval: 200
 save_total_limit: 3
 log_interval: 10

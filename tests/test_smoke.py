@@ -34,6 +34,8 @@ def test_imports():
 def test_geometry_losses():
     """Verifica losses que impedem colapso do manifold."""
     from drm_transformer.losses import (
+        coverage_entropy_loss,
+        intrinsic_dimension_loss,
         manifold_variance_loss,
         metric_diversity_loss,
         metric_regularization,
@@ -48,6 +50,8 @@ def test_geometry_losses():
     varied = torch.rand(2, 8, 4)
     assert manifold_variance_loss(collapsed).item() > 0
     assert manifold_variance_loss(varied).item() >= 0
+    assert intrinsic_dimension_loss(varied, target_dim=2.0).item() >= 0
+    assert coverage_entropy_loss(varied).item() >= 0
     assert torus_regularization_loss(varied).item() >= 0
 
 
@@ -230,10 +234,15 @@ def test_config_consistency():
         "log_interval", "data_dir", "eval_data_dir", "lambda_metric_reg",
         "lambda_metric_diversity", "lambda_ortho", "metric_diversity_warmup_steps",
         "target_metric_var", "lambda_manifold_variance", "target_manifold_std",
+        "lambda_intrinsic_dim", "lambda_intrinsic_dim_start", "lambda_intrinsic_dim_end",
+        "target_intrinsic_dim", "lambda_coverage", "lambda_coverage_start",
+        "lambda_coverage_end", "target_coverage_std",
         "lambda_torus", "torus_target_radius", "torus_radial_weight",
         "torus_coverage_weight",
         "torus_isotropy_weight", "torus_independence_weight",
         "torus_harmonic_weight", "geometry_warmup_steps",
+        "lambda_torus_start", "lambda_torus_end",
+        "geometry_schedule_start_step", "geometry_schedule_end_step",
         "weight_decay", "adam_beta1", "adam_beta2",
         "max_grad_norm", "min_lr_ratio",
         "gradient_checkpointing", "distributed", "fsdp", "fsdp_sharding",

@@ -1,7 +1,7 @@
 """Script unico de reproducao do baseline DRM Transformer.
 
 Executa todo o pipeline de reproducao do zero:
-1. Gera dataset baseline (Wikipedia EN 10M tokens)
+1. Gera dataset baseline (Wikipedia EN, 10M tokens por default)
 2. Verifica integridade via SHA256
 3. Treina baseline small_3.5M
 4. Roda ablacoes restantes (baseline entra como full)
@@ -12,6 +12,7 @@ Uso:
     python scripts/repro_baseline.py
     python scripts/repro_baseline.py --skip-data       # pula geracao de dados
     python scripts/repro_baseline.py --skip-ablations   # so baseline
+    python scripts/repro_baseline.py --max-tokens 20000000
     python scripts/repro_baseline.py --seed 123
 """
 
@@ -58,6 +59,8 @@ def main():
     parser.add_argument("--deterministic", action="store_true", default=True)
     parser.add_argument("--skip-data", action="store_true",
                         help="Pular geracao de dados (usa existentes)")
+    parser.add_argument("--max-tokens", type=int, default=10_000_000,
+                        help="Tokens para prepare_baseline_data.py")
     parser.add_argument("--skip-ablations", action="store_true",
                         help="Apenas baseline, sem ablacoes")
     parser.add_argument("--skip-eval", action="store_true",
@@ -72,8 +75,8 @@ def main():
     # 1. Dataset baseline
     if not args.skip_data:
         steps_total += 1
-        if _run([py, "scripts/prepare_baseline_data.py"],
-                "Gerar dataset baseline (Wikipedia EN 10M tokens)"):
+        if _run([py, "scripts/prepare_baseline_data.py", "--max-tokens", str(args.max_tokens)],
+                f"Gerar dataset baseline (Wikipedia EN {args.max_tokens:,} tokens)"):
             steps_ok += 1
         else:
             logger.error("[ABORT] Falha na geracao de dados")

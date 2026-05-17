@@ -1,0 +1,69 @@
+# ~1B DRM Transformer - PoC para 1x RTX 4090 24GB
+
+vocab_size: 50000
+d_model: 1536
+n_heads: 12
+n_layers: 32
+d_ff: 4096
+max_seq_len: 512
+dropout: 0.0
+bias: false
+
+# crítico para caber na 4090
+batch_size: 1
+gradient_accumulation_steps: 128
+gradient_checkpointing: true
+mixed_precision: bf16
+distributed: false
+compile_model: false
+
+# PoC curto: não tente "qualidade final" aqui
+learning_rate: 0.0002
+warmup_steps: 500
+total_tokens: 300_000_000
+
+eval_interval: 500
+save_interval: 500
+save_total_limit: 3
+log_interval: 25
+
+# --- Manifold DRM ---
+d_manifold: 16
+metric_hidden: 64
+metric_rank: 4
+n_quad: 0
+
+# --- Gamma / gravidade / dimensionalidade ---
+gamma_enabled: true
+gamma_c: 4.0
+gamma_alpha: 0.25
+
+gravity_enabled: true
+gravity_strength: 0.03
+gravity_n_rff: 64
+n_anchors: 6
+
+variable_dim: true
+
+# --- Losses DRM ---
+lambda_metric_reg: 0.0005
+lambda_metric_diversity: 0.03
+lambda_ortho: 0.01
+metric_diversity_warmup_steps: 1000
+
+lambda_manifold_variance: 0.05
+target_manifold_std: 0.08
+
+lambda_torus: 0.02
+torus_target_radius: 0.35
+torus_radial_weight: 1.0
+torus_coverage_weight: 0.25
+torus_isotropy_weight: 0.5
+torus_independence_weight: 0.5
+torus_harmonic_weight: 0.5
+geometry_warmup_steps: 1000
+
+target_metric_var: 0.001
+temperature_min: 0.5
+
+save_dir: checkpoints/poc_1b_4090

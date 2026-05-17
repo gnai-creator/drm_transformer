@@ -6,6 +6,7 @@ o mesmo dataset.
 
 Uso:
     python scripts/prepare_baseline_data.py
+    python scripts/prepare_baseline_data.py --max-tokens 20000000
     python scripts/prepare_baseline_data.py --verify
 
 O dataset e salvo em data/baseline/ com:
@@ -50,11 +51,16 @@ BASELINE_CONFIG = {
 OUTPUT_DIR = Path("data/baseline")
 
 
-def prepare_baseline() -> dict:
+def prepare_baseline(max_tokens: int | None = None) -> dict:
     """Gera dataset baseline deterministico."""
     from datasets import load_dataset
 
-    cfg = BASELINE_CONFIG
+    cfg = dict(BASELINE_CONFIG)
+    if max_tokens is not None:
+        if max_tokens <= 0:
+            raise ValueError("max_tokens deve ser positivo")
+        cfg["max_tokens"] = max_tokens
+
     output_dir = OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -117,11 +123,14 @@ def prepare_baseline() -> dict:
     logger.info("  train: %dM tokens, val: %dM tokens",
                 len(train_tokens) // 1_000_000, len(val_tokens) // 1_000_000)
 
-    # Salvar shards para train e val
+    # Salvar shards para train e val. Remove shards antigos para evitar mistura
+    # quando o usuario troca --max-tokens entre execucoes.
     shard_hashes = []
     for split_name, split_tokens in [("train", train_tokens), ("val", val_tokens)]:
         split_dir = output_dir / split_name
         split_dir.mkdir(parents=True, exist_ok=True)
+        for old_shard in list(split_dir.glob("*.npy")) + list(split_dir.glob("*.bin")):
+            old_shard.unlink()
 
         buffer = list(split_tokens)
         shard_idx = 0
@@ -227,13 +236,19 @@ def verify_baseline() -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Dataset baseline reproduzivel")
     parser.add_argument("--verify", action="store_true", help="Apenas verificar integridade")
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=None,
+        help="Quantidade total de tokens antes do split train/val (default: 10000000)",
+    )
     args = parser.parse_args()
 
     if args.verify:
         ok = verify_baseline()
         sys.exit(0 if ok else 1)
     else:
-        prepare_baseline()
+        prepare_baseline(max_tokens=args.max_tokens)
         # Force exit para evitar crash no cleanup do datasets/pyarrow
         # (PyGILState_Release bug em threads de streaming ao finalizar)
         import os

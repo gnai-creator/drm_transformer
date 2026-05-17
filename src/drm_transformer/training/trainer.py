@@ -233,6 +233,41 @@ class DRMTrainer:
 
         return metrics
 
+    def _scheduled_value(
+        self,
+        base_key: str,
+        default: float = 0.0,
+        start_key: str | None = None,
+        end_key: str | None = None,
+        start_step_key: str = "geometry_schedule_start_step",
+        end_step_key: str = "geometry_schedule_end_step",
+    ) -> float:
+        """Valor com schedule linear opcional.
+
+        Se ``start_key`` e ``end_key`` existem no config, interpola linearmente
+        entre eles. Caso contrario, retorna ``base_key``.
+        """
+        if start_key is None:
+            start_key = f"{base_key}_start"
+        if end_key is None:
+            end_key = f"{base_key}_end"
+
+        if start_key not in self.config or end_key not in self.config:
+            return float(self.config.get(base_key, default))
+
+        start_value = float(self.config[start_key])
+        end_value = float(self.config[end_key])
+        start_step = int(self.config.get(start_step_key, 0))
+        end_step = int(self.config.get(end_step_key, start_step))
+
+        if self.global_step <= start_step:
+            return start_value
+        if self.global_step >= end_step or end_step <= start_step:
+            return end_value
+
+        ratio = (self.global_step - start_step) / max(end_step - start_step, 1)
+        return start_value + ratio * (end_value - start_value)
+
     def _compute_drm_losses(self, input_ids: torch.Tensor) -> torch.Tensor:
         """Computa losses DRM (metric regularization + diversity).
 
@@ -257,13 +292,17 @@ class DRMTrainer:
             metric_regularization,
             metric_diversity_loss,
             manifold_variance_loss,
+            intrinsic_dimension_loss,
+            coverage_entropy_loss,
             torus_regularization_loss,
         )
 
         lambda_reg = self.config.get("lambda_metric_reg", 0.001)
         lambda_div = self.config.get("lambda_metric_diversity", 0.05)
         lambda_manifold_var = self.config.get("lambda_manifold_variance", 0.0)
-        lambda_torus = self.config.get("lambda_torus", 0.0)
+        lambda_intrinsic_dim = self._scheduled_value("lambda_intrinsic_dim", 0.0)
+        lambda_coverage = self._scheduled_value("lambda_coverage", 0.0)
+        lambda_torus = self._scheduled_value("lambda_torus", 0.0)
         warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
         warmup_geometry = self.config.get("geometry_warmup_steps", warmup_div)
 
@@ -286,6 +325,20 @@ class DRMTrainer:
             if lambda_manifold_var > 0:
                 target_std = self.config.get("target_manifold_std", 0.08)
                 drm_loss = drm_loss + lambda_manifold_var * manifold_variance_loss(
+                    coords,
+                    target_std=target_std,
+                )
+
+            if lambda_intrinsic_dim > 0:
+                target_dim = self.config.get("target_intrinsic_dim", 2.0)
+                drm_loss = drm_loss + lambda_intrinsic_dim * intrinsic_dimension_loss(
+                    coords,
+                    target_dim=target_dim,
+                )
+
+            if lambda_coverage > 0:
+                target_std = self.config.get("target_coverage_std", 0.20)
+                drm_loss = drm_loss + lambda_coverage * coverage_entropy_loss(
                     coords,
                     target_std=target_std,
                 )

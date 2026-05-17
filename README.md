@@ -1,5 +1,9 @@
 # DRM Transformer
 
+<p align="center">
+  <img src="drm_transformer_logo.png" alt="DRM Transformer logo" width="800">
+</p>
+
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Commercial License](https://img.shields.io/badge/License-Commercial-orange.svg)](LICENSE-COMMERCIAL.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab.svg)](https://python.org)
@@ -160,7 +164,7 @@ A inicializacao semantica fornece um prior geometrico interpretavel.
 | `n_anchors` | int | 6 | Numero de anchors semanticos |
 | `gamma_enabled` | bool | True | Habilitar gamma-scaling (Lorentz) |
 | `gamma_c` | float | 4.0 | Limite de velocidade (c) |
-| `gamma_alpha` | float | 0.0 | Alpha para annealing log-gamma |
+| `gamma_alpha` | float | 1.0 | Alpha para annealing log-gamma |
 | `temperature_init` | float | 1.0 | Temperatura inicial da atencao |
 | `temperature_min` | float | 0.5 | Temperatura minima (clamp) |
 | `gravity_enabled` | bool | True | Habilitar campo gravitacional |
@@ -179,8 +183,36 @@ A inicializacao semantica fornece um prior geometrico interpretavel.
 | `orthogonality_loss(U)` | Penaliza U^T U != I | Previne colapso dos eixos semanticos |
 | `axis_variance_loss(U)` | Maximiza variancia de cada eixo na sequencia | Encoraja deformacao position-dependent |
 | `anchor_alignment_loss(U, coords, anchors)` | Alinha primeiro eixo de U com anchor mais proximo | Sugere orientacao semantica (soft) |
+| `manifold_variance_loss(coords)` | Mantem variancia minima nas coordenadas DRM | Evita colapso pontual do manifold |
+| `intrinsic_dimension_loss(coords)` | Aproxima a dimensao intrinseca alvo | Favorece folhas locais 2D quando configurado |
+| `coverage_entropy_loss(coords)` | Espalha coordenadas sem impor forma fechada | Melhora cobertura do manifold |
+| `torus_regularization_loss(coords)` | Regularizacao toroidal opcional | Testa inducao explicita de topologia T^2 |
 
-Pesos configurados via `lambda_metric_reg`, `lambda_metric_diversity`, `lambda_ortho` no config de treino.
+Pesos configurados no YAML de treino, fora de `DRMTransformerConfig`.
+
+| Campo YAML | Default usado no baseline 3.5M | Descricao |
+|------------|-------------------------------|-----------|
+| `lambda_metric_reg` | 0.001 | Peso de regularizacao da metrica |
+| `lambda_metric_diversity` | 0.01 | Peso de diversidade de U(x) |
+| `lambda_ortho` | 0.01 | Peso de ortogonalidade |
+| `lambda_manifold_variance` | 0.05 | Peso para evitar colapso das coordenadas DRM |
+| `target_manifold_std` | 0.08 | Desvio-padrao minimo alvo do manifold |
+| `lambda_intrinsic_dim` | 0.02 | Peso da perda de dimensao intrinseca |
+| `target_intrinsic_dim` | 2.0 | Dimensao intrinseca alvo |
+| `lambda_coverage` | 0.02 | Peso da perda generica de cobertura |
+| `target_coverage_std` | 0.20 | Escala alvo de cobertura |
+| `lambda_torus` | 0.07 | Peso base da regularizacao toroidal |
+| `lambda_torus_start` | 0.07 | Peso inicial do schedule toroidal |
+| `lambda_torus_end` | 0.0 | Peso final do schedule toroidal |
+| `torus_target_radius` | 0.35 | Raio alvo dos pares circulares |
+| `torus_radial_weight` | 5.0 | Peso radial dentro da loss toroidal |
+| `torus_coverage_weight` | 0.75 | Peso de cobertura angular |
+| `torus_isotropy_weight` | 0.75 | Peso de isotropia dos dois ciclos |
+| `torus_independence_weight` | 0.25 | Peso de independencia entre ciclos |
+| `torus_harmonic_weight` | 0.5 | Peso de harmonicos angulares |
+| `geometry_warmup_steps` | 500 | Inicio das losses geometricas |
+| `geometry_schedule_start_step` | 500 | Inicio do schedule linear |
+| `geometry_schedule_end_step` | 2441 | Fim do schedule linear |
 
 ---
 
@@ -359,7 +391,7 @@ Ver [repro.md](repro.md) para guia detalhado e [MODEL_CARD.md](MODEL_CARD.md) pa
 ### Baseline Canonico
 
 ```bash
-python scripts/prepare_baseline_data.py                    # Dataset Wikipedia EN 10M tokens
+python scripts/prepare_baseline_data.py --max-tokens 10000000  # Dataset Wikipedia EN (default: 10M)
 python scripts/prepare_baseline_data.py --verify           # Verificar SHA256
 python scripts/train_distributed.py \
     --config configs/baselines/small_3.5M.yaml \
@@ -470,11 +502,12 @@ drm_transformer/
 |-- scripts/
 |   |-- train_distributed.py        # Lancamento treino (single/multi GPU, --seed, --deterministic)
 |   |-- prepare_multilingual_data.py # Download CulturaX/Wikipedia + tokenize + remap (streaming)
-|   |-- prepare_baseline_data.py     # Dataset baseline fixo (Wikipedia EN 10M tokens, SHA256)
+|   |-- prepare_baseline_data.py     # Dataset baseline Wikipedia EN (--max-tokens, SHA256)
 |   |-- repro_baseline.py           # Reproducao completa em um comando + KPI dashboard
 |   |-- run_ablations.py            # Roda ablacoes restantes e gera results_ablations.md
 |   |-- eval_standard.py            # Avaliacao padronizada (perplexity)
 |   |-- extract_drm_vectors.py      # Extrai coords, G_diag, gamma, mass
+|   |-- topology_controls.py        # Random init, checkpoints, seeds e ablacoes em tabela topologica
 |   +-- voronoi_foliation_drm.py    # 9 fases: Voronoi, LTSA, Homology, Reeb, ARI
 |
 |-- configs/

@@ -115,6 +115,72 @@ def manifold_variance_loss(
     return F.relu(target - std).pow(2).mean().to(coords.dtype)
 
 
+def intrinsic_dimension_loss(
+    coords: torch.Tensor,
+    target_dim: float = 2.0,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Regulariza a dimensao intrinseca global sem impor topologia especifica.
+
+    Usa o participation ratio do espectro da covariancia:
+    (sum lambda)^2 / sum(lambda^2). Esse valor e proximo do numero efetivo de
+    eixos usados. Diferente da loss toroidal, nao define pares circulares nem
+    raio alvo; ela apenas desencoraja nuvens volumetricas quando o alvo e 2D.
+
+    Args:
+        coords: [B, T, D] ou [B, H, T, D] coordenadas no manifold.
+        target_dim: Dimensao intrinseca alvo.
+        eps: Estabilizador numerico.
+
+    Returns:
+        Loss escalar.
+    """
+    if coords.dim() == 4:
+        flat = coords.transpose(1, 2).reshape(-1, coords.shape[-1])
+    else:
+        flat = coords.reshape(-1, coords.shape[-1])
+
+    if flat.shape[0] < 2:
+        return torch.tensor(0.0, device=coords.device, dtype=coords.dtype)
+
+    x = flat.float() - flat.float().mean(dim=0, keepdim=True)
+    cov = x.T @ x / max(flat.shape[0] - 1, 1)
+    eigvals = torch.linalg.eigvalsh(cov).clamp_min(0.0)
+    eff_dim = eigvals.sum().pow(2) / (eigvals.pow(2).sum() + eps)
+    target = torch.as_tensor(target_dim, device=coords.device, dtype=eff_dim.dtype)
+    return ((eff_dim - target) / max(float(coords.shape[-1]), 1.0)).pow(2).to(coords.dtype)
+
+
+def coverage_entropy_loss(
+    coords: torch.Tensor,
+    target_std: float = 0.20,
+) -> torch.Tensor:
+    """Incentiva cobertura marginal do manifold sem prescrever forma global.
+
+    Penaliza apenas eixos cuja dispersao fica abaixo do alvo. Esta perda e mais
+    fraca e mais generica que a regularizacao toroidal: ela evita colapso, mas
+    nao especifica ciclos, raios ou pares de coordenadas.
+
+    Args:
+        coords: [B, T, D] ou [B, H, T, D].
+        target_std: Desvio-padrao marginal minimo.
+
+    Returns:
+        Loss escalar.
+    """
+    if coords.dim() == 4:
+        flat = coords.transpose(1, 2).reshape(-1, coords.shape[-1])
+    else:
+        flat = coords.reshape(-1, coords.shape[-1])
+
+    if flat.shape[0] < 2:
+        return torch.tensor(0.0, device=coords.device, dtype=coords.dtype)
+
+    std = flat.float().std(dim=0, unbiased=False)
+    target = torch.as_tensor(target_std, device=std.device, dtype=std.dtype)
+    return F.relu(target - std).pow(2).mean().to(coords.dtype)
+
+
 def torus_regularization_loss(
     coords: torch.Tensor,
     target_radius: float = 0.35,
