@@ -11,7 +11,7 @@
 [![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/multilingual/)
 [![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
 [![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
-[![Foliation](https://img.shields.io/badge/Stable-H1%3D2%20H2%3D1-brightgreen.svg)](repro.md#analise-de-foliacao)
+[![Foliation](https://img.shields.io/badge/Near--T2-seed--robust-orange.svg)](repro.md#controles-topologicos)
 
 ## Indice
 
@@ -340,8 +340,12 @@ python scripts/voronoi_foliation_drm.py \
 ```
 
 Saidas: `foliation_results.json` com F-score, H1/H2, ARI, coherence, Reeb graph.
-Baseline atual: `H1=2`, `H2=1`, `t2_stable_fraction=0.60`, classificado como
-`torus T^2 (stable)` pelo criterio de homologia persistente com subsamples.
+Baseline atual: assinatura near-toroidal robusta a seeds. Em controles
+topologicos, o random init ficou em `Near T2=0.0`, enquanto seeds treinadas
+ficaram em `Near T2 >= 0.6`; duas de tres seeds recuperaram `H1=2`, `H2=1`
+como topologia mediana. O criterio estrito `T2 stable >= 0.60` ainda nao foi
+atingido, portanto o resultado deve ser descrito como *near-stable toroidal
+signature*, nao como toro estavel final.
 
 ### Avaliacao via API Python
 

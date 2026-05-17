@@ -1,0 +1,64 @@
+\section{Resultados Preliminares}
+\label{sec:resultados}
+
+O baseline canônico tem aproximadamente 3,5 milhões de parâmetros e foi
+treinado em Wikipedia EN, com semente fixa e modo determinístico. A
+Tabela~\ref{tab:linguagem} resume os resultados de linguagem registrados no
+model card.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+Métrica & full & no\_gravity & no\_gamma & no\_variable\_dim \\
+\midrule
+Val Loss & 6.415 & 6.385 & 6.321 & 6.428 \\
+Val PPL & 611.2 & 593.2 & 556.1 & 619.2 \\
+Train Loss & 6.344 & 5.883 & 6.252 & 6.308 \\
+Tokens/s & 86163 & 92464 & 86468 & 86360 \\
+\bottomrule
+\end{tabular}
+\caption{Resultados preliminares do baseline small\_3.5M e ablações.}
+\label{tab:linguagem}
+\end{table}
+
+Em escala tão pequena, a diferença entre variantes ainda é marginal. A
+variante \texttt{no\_gamma} obteve a menor perplexidade de validação em algumas
+rodadas, sugerindo que o gamma-scaling pode exigir mais dados ou escala para se
+tornar benéfico em modelagem de linguagem.
+
+A avaliação topológica atual usa 99.840 vetores DRM, $K=80$ células de
+Voronoi, 1.200 pontos para homologia, 10 restarts, razão de barra longa
+$\rho=0{,}80$, projeção PCA3 e remoção dos 10\% pontos mais esparsos antes da
+homologia persistente. O critério estrito de validação toroidal é:
+\begin{equation}
+  H_1=2,\qquad H_2=1,\qquad f_{T^2}\geq 0{,}60.
+\end{equation}
+
+Esse critério estrito ainda não foi atingido. Entretanto, os controles sugerem
+que o treinamento desloca o manifold DRM de uma topologia inicial de gênero
+alto e instável para uma assinatura homológica compatível com uma superfície
+fechada quase-toroidal. A inicialização aleatória apresentou topologia de
+gênero alto, $H_1=5$, $H_2=2$, com $f_{T^2}=0{,}00$ e \emph{Near T2}=0{,}00.
+Após treinamento, três sementes independentes produziram \emph{Near T2}
+elevado:
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Controle & $H_1$ & $H_2$ & $f_{T^2}$ & Near T2 \\
+\midrule
+random init & 5 & 2 & 0{,}00 & 0{,}00 \\
+seed 42 & 2 & 1 & 0{,}40 & 0{,}70 \\
+seed 123 & 1 & 1 & 0{,}20 & 0{,}60 \\
+seed 2025 & 2 & 1 & 0{,}30 & 0{,}80 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Em duas de três sementes treinadas, a topologia mediana coincide com
+$H_1=2$, $H_2=1$, assinatura esperada de $T^2$; em todas as sementes treinadas,
+há sinal \emph{Near T2}, enquanto a inicialização aleatória não apresenta esse
+sinal. Portanto, a leitura correta não é ``toro estável'', mas sim assinatura
+homológica compatível com uma superfície fechada quase-toroidal e robusta a
+sementes. O resultado também sugere que a assinatura não é mero artefato da
+inicialização, pois o controle não treinado não exibiu sinal próximo de $T^2$.

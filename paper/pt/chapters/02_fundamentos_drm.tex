@@ -1,0 +1,45 @@
+\section{Fundamentos de Directional Relational Manifolds}
+\label{sec:fundamentos}
+
+Um DRM é uma estrutura geométrica na qual cada ponto $p$ possui um conjunto de
+direções ativas $D(p)$. A dimensionalidade local é definida por
+\begin{equation}
+  \dim_D(p) = |D(p)|,
+\end{equation}
+ou, em formulações lineares, pelo posto efetivo do conjunto direcional. Ao
+contrário de uma variedade Riemanniana clássica, onde a dimensão local é
+constante, um DRM admite que $\dim_D(p)$ varie ao longo do espaço. A estrutura
+básica é um par $(M,D)$, com $M$ topológico e $D$ uma atribuição mensurável de
+direções ativas que varia continuamente em sentido apropriado.
+
+A métrica relacional é definida apenas sobre as direções ativas:
+\begin{equation}
+  g_p: D(p) \times D(p) \rightarrow \mathbb{R}.
+\end{equation}
+Quando $D(p)$ é constante, finito e ortonormal, a estrutura reduz ao caso
+Riemanniano usual. Quando $D(p)$ tem dimensão constante e $g_p$ coincide com a
+métrica de Fisher em uma família estatística, o DRM reduz à geometria da
+informação. Dessa forma, DRM pode ser visto como uma generalização que permite
+postos variáveis e modos não ortogonais \cite{amari_information_geometry,
+muniz_drm_v11}.
+
+No contexto computacional deste trabalho, o conjunto direcional não é
+representado explicitamente como uma base simbólica, mas por coordenadas
+aprendidas em um manifold de dimensão $d_m$ e por um tensor métrico low-rank.
+A parametrização usada no modelo é
+\begin{equation}
+  G(x) = I + U(x) U(x)^\top,
+\end{equation}
+onde $U(x) \in \mathbb{R}^{d_m \times r}$ é produzido por uma rede
+\emph{MetricNet}. Essa forma garante positividade semidefinida e mantém o custo
+de atenção viável, pois a distância métrica pode ser computada por
+\begin{equation}
+  d_G^2(q,k) = \|\Delta\|^2 + \|U(q)^\top \Delta\|^2,
+  \quad \Delta = q-k.
+\end{equation}
+
+O teorema de convergência toroidal do DRM original afirma que, sob hipóteses de
+limitação, recorrência e estabilidade estrutural, a dinâmica pode apresentar
+conjuntos limite compactos com topologia toroidal \cite{muniz_drm_v11}. No
+modelo proposto, essa afirmação não é assumida como garantia universal; ela é
+tratada como alvo empírico verificável por homologia persistente.

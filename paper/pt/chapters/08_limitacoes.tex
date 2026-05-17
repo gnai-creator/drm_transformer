@@ -1,0 +1,40 @@
+\section{Limitações}
+\label{sec:limitacoes}
+
+O DRM Transformer é um protótipo de pesquisa. O baseline atual é pequeno,
+aproximadamente 3,5 milhões de parâmetros, e foi treinado por poucos tokens em
+comparação com modelos de linguagem modernos. Portanto, os resultados de
+perplexidade não devem ser comparados diretamente a modelos de produção.
+
+A validação topológica depende de escolhas de avaliação: número de sementes
+Voronoi, tamanho do subsample de homologia, razão de barra longa, projeção PCA,
+filtro de densidade e número de restarts. O critério estrito
+$f_{T^2}\geq 0{,}60$ reduz falsos positivos, mas ainda é uma convenção
+experimental. Nos resultados atuais, o modelo treinado apresenta assinatura
+toroidal quase-estável, mas não atinge esse limiar estrito.
+
+As perdas toroidais são indutivas: elas ajudam a induzir $T^2$ em dimensão
+quatro, mas também podem competir com a perda de linguagem. O fato de controles
+sem regularização toroidal ainda apresentarem algum sinal próximo de $T^2$
+sugere que a arquitetura também contribui para a estrutura, mas a separação
+entre topologia aprendida, topologia induzida e artefatos de TDA ainda requer
+mais ablações.
+
+Além disso, a geometria local permanece espessa em 4D em várias rodadas. A
+assinatura toroidal aparece com mais clareza em homologia PCA3 com filtro de
+densidade, e não de forma plenamente estável no embedding 4D bruto. Em modelos
+maiores, os pesos das perdas geométricas provavelmente precisarão ser
+reescalados.
+
+Por fim, a relação com a física relativística é formal e analógica. O fator de
+Lorentz é usado como inspiração matemática para controle de escala; o modelo
+não afirma implementar uma nova teoria física.
+
+De modo semelhante, a discussão sobre geometria aberta, negociação e segurança
+de IA é uma motivação conceitual, não uma garantia operacional. O DRM
+Transformer não prova que uma IA será segura por possuir topologia fechada, nem
+substitui avaliação comportamental, governança, interpretabilidade ou controle
+externo. A contribuição aqui é propor uma hipótese mensurável: se certos
+conflitos epistêmicos e semânticos aparecem como estruturas geométricas, então
+podem ser comparados por ablações, homologia persistente e controles de
+inicialização.

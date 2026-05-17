@@ -1,0 +1,48 @@
+\section{Treinamento e Regularização Geométrica}
+\label{sec:treinamento}
+
+A perda principal continua sendo a entropia cruzada autoregressiva:
+\begin{equation}
+  \mathcal{L}_{CE} = -\sum_t \log p(x_{t+1}\mid x_{\leq t}).
+\end{equation}
+Sobre ela são adicionadas perdas geométricas. A regularização da métrica
+penaliza normas excessivas de $U(x)$:
+\begin{equation}
+  \mathcal{L}_{metric}=\mathbb{E}\|U(x)\|_F^2.
+\end{equation}
+A diversidade métrica incentiva $U(x)$ a variar ao longo dos tokens, evitando
+uma métrica constante. A perda de ortogonalidade aproxima os eixos semânticos
+low-rank de direções menos redundantes.
+
+Como os primeiros experimentos mostraram colapso das coordenadas do manifold
+próximo de $0{,}5$, foi introduzida uma perda de variância:
+\begin{equation}
+  \mathcal{L}_{var} =
+  \frac{1}{d_m}\sum_{\ell=1}^{d_m}
+  \max(0, s_0-\operatorname{std}(x_\ell))^2.
+\end{equation}
+Essa perda recebe gradiente até o projetor $q\rightarrow q_m$, ao contrário das
+perdas aplicadas somente à MetricNet.
+
+Para $d_m=4$, adicionamos uma regularização toroidal explícita. Os pares
+$(x_0,x_1)$ e $(x_2,x_3)$ são tratados como dois círculos em torno de $0{,}5$.
+Com $z_1=(x_0,x_1)-0{,}5$ e $z_2=(x_2,x_3)-0{,}5$, a perda contém:
+\begin{itemize}
+  \item termo radial, que aproxima $\|z_1\|$ e $\|z_2\|$ de um raio alvo;
+  \item termo de cobertura angular, que força médias vetoriais próximas de
+  zero;
+  \item termo de isotropia, que evita elipses degeneradas;
+  \item termo de independência entre os dois ciclos;
+  \item termo de segunda harmônica, que evita cobertura bilobada.
+\end{itemize}
+O baseline estável usou raio alvo $0{,}35$ e pesos internos ajustados
+experimentalmente para equilibrar cobertura, espessura radial e independência.
+
+Para testar se a topologia pode ser sustentada sem imposição permanente, a
+implementação também suporta um currículo linear para os pesos geométricos. Em
+particular, \texttt{lambda\_torus\_start} e \texttt{lambda\_torus\_end}
+permitem iniciar o treino com regularização toroidal forte e reduzi-la até zero
+ao longo dos passos. Além disso, foram adicionadas perdas menos prescritivas:
+\texttt{intrinsic\_dimension\_loss}, que favorece uma dimensão efetiva alvo
+por espectro de covariância, e \texttt{coverage\_entropy\_loss}, que incentiva
+cobertura marginal sem especificar ciclos, raios ou pares de coordenadas.

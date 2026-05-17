@@ -1,0 +1,34 @@
+\section{Avaliação Topológica}
+\label{sec:avaliacao}
+
+A avaliação topológica segue um pipeline de nove fases implementado em
+\texttt{scripts/voronoi\_foliation\_drm.py}. Primeiro, são extraídas
+coordenadas DRM, diagonal efetiva de $G(x)$, gamma e massa por token. Em
+seguida, aplica-se KMeans para formar uma tesselação de Voronoi no manifold.
+Cada célula é analisada por PCA local, produzindo uma estimativa de dimensão
+efetiva por LTSA.
+
+A coerência tangente é calculada por ângulos principais entre subespaços
+locais de células vizinhas. A análise de Reeb usa funções escalares como gamma
+ou coordenadas do manifold para detectar divisões e fusões de níveis. A
+homologia persistente é computada por \emph{ripser} em subsamples de tamanho
+controlado, usando normalização z-score e uma regra de barras longas baseada em
+fração da maior persistência:
+\begin{equation}
+  \operatorname{long}(b) \iff
+  \operatorname{pers}(b) \geq \rho \max_b \operatorname{pers}(b).
+\end{equation}
+
+Para evitar validação por acaso, a homologia é repetida em múltiplos
+subsamples. A fração estável de toro é definida por
+\begin{equation}
+  f_{T^2} =
+  \frac{1}{R}\sum_{r=1}^{R}
+  \mathbf{1}[H_1^{(r)}=2 \land H_2^{(r)}=1].
+\end{equation}
+Neste trabalho, a assinatura toroidal é considerada estável quando
+$f_{T^2}\geq 0{,}60$.
+
+Também são avaliados modelos nulos: coordenadas embaralhadas por eixo e
+coordenadas uniformes. Esses controles ajudam a distinguir estrutura
+persistente de artefatos de clustering ou de distribuição marginal.

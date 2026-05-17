@@ -1,0 +1,36 @@
+\section{Dinâmica Relativística e Escala Gamma}
+\label{sec:relativistica}
+
+O segundo fundamento conceitual vem da formulação de DRM com dinâmica não
+linear dirigida por escala relativística \cite{muniz_relativistic_drm}. Nessa
+formulação, um mapa iterativo
+\begin{equation}
+  x_{n+1}=F(x_n; A(\omega,r), D(x_n), g_{x_n})
+\end{equation}
+é controlado por uma amplitude
+\begin{equation}
+  A(\omega,r) = \frac{4}{\pi}\omega r \gamma(\omega r),
+\end{equation}
+onde $\gamma$ é o fator de Lorentz e $v=\omega r$ é uma velocidade tangencial.
+À medida que $v$ se aproxima de $c$, $\gamma(v)$ diverge:
+\begin{equation}
+  \gamma(v)=\frac{1}{\sqrt{1-v^2/c^2}}.
+\end{equation}
+
+No paper de dinâmica relativística, essa divergência é associada a regimes de
+bifurcação, multiatratores e, sob hipóteses explícitas, convergência para
+atratores toroidais. O DRM Transformer não implementa literalmente o mapa
+logístico direcional do paper. Em vez disso, usa a intuição da escala
+relativística como modulação de resolução geométrica na atenção.
+
+Na implementação, cada token projetado no manifold tem distância a âncoras
+semânticas. Essa distância gera um fator gamma suavizado, limitado e aplicado à
+distância geodésica:
+\begin{equation}
+  \tilde{d}_{ij}^2 = d_{G,ij}^2
+    \left(1+\alpha \log(1+\gamma_i-1)\right)^2.
+\end{equation}
+O parâmetro $\alpha$ controla a força do gamma-scaling. O uso do logaritmo e de
+clamps evita singularidades numéricas e preserva estabilidade durante o treino.
+Assim, o fator relativístico funciona como um mecanismo adaptativo de escala,
+sem reivindicar nova física fundamental.

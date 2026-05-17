@@ -110,23 +110,25 @@ python scripts/voronoi_foliation_drm.py \
 
 ## 4. Criterio Atual
 
-A topologia toroidal e considerada validada quando a homologia persistente
-retorna:
+A topologia toroidal so e considerada validada pelo criterio estrito quando a
+homologia persistente retorna:
 
 - `H1=2`
 - `H2=1`
 - `T2 stable >= 0.60`
 
-Resultado de referencia observado no baseline 3.5M:
+Resultado atual do baseline 3.5M:
 
 ```text
-topology=torus T^2 (stable)
-H1=2
-H2=1
-T2 stable=0.60
-ARI=0.7959
-F=0.4410
+seed-robust near-toroidal signature
+random_init: Near T2=0.0
+seed_42: H1=2, H2=1, T2 stable=0.4, Near T2=0.7
+seed_123: H1=1, H2=1, T2 stable=0.2, Near T2=0.6
+seed_2025: H1=2, H2=1, T2 stable=0.3, Near T2=0.8
 ```
+
+Como nenhuma seed atingiu `T2 stable >= 0.60`, o resultado deve ser relatado
+como assinatura toroidal quase-estavel, nao como toro estavel fechado.
 
 ## 5. Ablacoes de Treino
 

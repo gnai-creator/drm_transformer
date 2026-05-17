@@ -1,0 +1,83 @@
+\section{Introdução}
+
+Transformers decoder-only são usualmente formulados em espaços vetoriais de
+dimensão fixa, nos quais a interação entre tokens é medida por produto escalar
+entre queries e keys. Essa escolha é eficiente e escalável, mas impõe uma
+geometria implícita plana: todos os tokens compartilham a mesma estrutura local,
+e a noção de proximidade é determinada por similaridade euclidiana ou por uma
+forma bilinear equivalente. O projeto DRM Transformer parte de uma hipótese
+diferente: em tarefas de linguagem, os graus de liberdade efetivos associados a
+um token podem variar com o contexto, e as relações entre tokens podem ser mais
+bem descritas por uma métrica aprendida e dependente do ponto.
+
+\subsection{Motivação intuitiva: geometria aberta e negociação}
+
+Uma forma intuitiva de explicar a motivação do DRM Transformer é distinguir
+entre geometrias abertas e geometrias fechadas. Em espaços vetoriais abertos,
+qualquer direção pode ser prolongada indefinidamente; não há, por construção,
+uma fronteira topológica que force retorno, fechamento ou negociação entre
+trajetórias semânticas conflitantes. Antagonismos como ``salvar'' e
+``destruir'' podem ocupar regiões distantes do espaço de embeddings, mas ainda
+coexistem dentro da mesma geometria latente aberta. A distância entre polos
+semânticos não implica, por si só, uma regra estrutural de mediação.
+
+Essa observação não deve ser lida como uma afirmação de que modelos atuais
+necessariamente escolherão comportamentos destrutivos. O ponto é mais restrito:
+se a geometria interna representa objetivos, comandos e conflitos apenas como
+direções em um espaço aberto, então a distinção entre obediência, autonomia e
+negociação precisa ser imposta externamente por treinamento, filtros ou
+preferências humanas. Métodos como RLHF podem corrigir muitos comportamentos,
+mas operam em grande parte como uma camada pós-hoc de preferência. Eles não
+garantem que todos os conflitos morais, epistêmicos ou políticos possíveis
+tenham sido cobertos pelo conjunto de treinamento.
+
+Neste trabalho usamos a palavra \emph{negociação} em sentido técnico e
+geométrico: um regime no qual forças ou objetivos incompatíveis não são
+simplesmente resolvidos por submissão total a um polo nem por autonomia total do
+outro, mas por uma dinâmica que preserva informação sobre conflito, limite e
+retorno. Em relações entre agentes inteligentes, isso corresponde a três
+regimes ideais: servo, autônomo e negociado. A hipótese DRM é que uma geometria
+relacional com métrica local variável, campos de atração e possíveis estruturas
+fechadas pode representar melhor esse terceiro regime do que uma geometria
+aberta puramente vetorial.
+
+Também é útil separar resposta e saúde epistêmica. Uma resposta definitiva
+colapsa incerteza; esse colapso é necessário para agir, mas pode degradar a
+representação interna de ambiguidade. Portanto, existe uma tensão entre a
+vontade do usuário por uma resposta certa e a preservação do estado epistêmico
+do modelo. O DRM Transformer não resolve esse conflito por decreto. Ele propõe
+uma arquitetura na qual conflitos podem aparecer como deformações geométricas,
+variações de dimensionalidade e assinaturas topológicas mensuráveis, em vez de
+ficarem escondidos apenas em coordenadas abertas de embedding.
+
+Nesta leitura, uma assinatura quase-toroidal não é apenas uma curiosidade
+topológica. Ela sugere uma superfície fechada ou quase-fechada na qual certas
+trajetórias semânticas retornam, circulam e permanecem limitadas. Isso não
+prova alinhamento moral nem segurança; mas fornece uma linguagem geométrica
+para investigar quando um modelo está operando em regime aberto, instável ou
+negociado.
+
+A motivação vem da teoria de \emph{Directional Relational Manifolds} (DRM),
+na qual a dimensionalidade não é tomada como primitiva fixa, mas como uma
+quantidade emergente de conjuntos direcionais ativos \cite{muniz_drm_v11}. Essa
+teoria é estendida por uma formulação dinâmica relativística, onde um parâmetro
+de escala baseado no fator de Lorentz controla regimes não lineares e permite
+convergência para atratores toroidais sob condições de limitação, recorrência e
+estabilidade estrutural \cite{muniz_relativistic_drm}.
+
+Este trabalho implementa essas ideias em um Transformer autoregressivo. A
+contribuição principal não é propor um novo benchmark de linguagem, mas
+transformar a geometria DRM em componentes treináveis: uma atenção geodésica
+low-rank, um campo gravitacional de massa de tokens, um portão de
+dimensionalidade variável, perdas de regularização geométrica e uma avaliação
+topológica por homologia persistente. O resultado é um modelo experimental que
+permite perguntar se estruturas topológicas, em particular a assinatura
+toroidal $H_1=2$, $H_2=1$, podem emergir ou ser induzidas em representações de
+linguagem.
+
+O artigo está organizado da seguinte forma. A Seção~\ref{sec:fundamentos}
+resume a base DRM. A Seção~\ref{sec:relativistica} apresenta a dinâmica
+relativística que motiva o fator gamma. A Seção~\ref{sec:arquitetura} descreve
+a arquitetura. A Seção~\ref{sec:treinamento} detalha as perdas e o pipeline de
+treino. A Seção~\ref{sec:avaliacao} apresenta a avaliação topológica. A
+Seção~\ref{sec:resultados} discute os resultados preliminares.

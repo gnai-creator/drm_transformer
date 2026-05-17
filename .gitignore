@@ -47,4 +47,3 @@ wandb/
 # Extracted PDF text
 docs/paper/*.pdf
 docs/paper/_extracted/
-paper/**/*

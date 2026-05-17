@@ -1,0 +1,31 @@
+\section{Conclusão}
+\label{sec:conclusao}
+
+Apresentamos o DRM Transformer, um Transformer decoder-only que substitui a
+atenção por produto escalar por uma atenção geodésica em um Directional
+Relational Manifold aprendido. A arquitetura combina MetricNet low-rank,
+deformação gravitacional, gamma-scaling relativístico e dimensionalidade
+variável. A partir dos papers DRM e de dinâmica relativística, implementamos
+uma versão neural treinável da ideia de dimensionalidade emergente e estrutura
+toroidal.
+
+O resultado mais importante até o momento é a observação de uma assinatura
+homológica compatível com uma superfície fechada quase-toroidal e robusta a
+sementes no baseline small\_3.5M. Os controles sugerem que o treinamento
+desloca o manifold DRM de uma topologia inicial de gênero alto e instável para
+essa assinatura: em duas de três sementes treinadas, a topologia mediana
+coincide com $H_1=2$, $H_2=1$, assinatura esperada de $T^2$; em todas as
+sementes treinadas há sinal \emph{Near T2}, enquanto a inicialização aleatória
+não apresenta esse sinal. Esse resultado não encerra a validação do método,
+pois o critério estrito $f_{T^2}\geq 0{,}60$ não foi atingido, mas demonstra que
+a geometria DRM pode ser operacionalizada em modelos de linguagem e avaliada
+por ferramentas topológicas objetivas.
+
+Trabalhos futuros incluem escalar o modelo, testar ablações em 50M, 350M e
+1B+ parâmetros, comparar contra atenção padrão sob orçamento equivalente e
+estudar a relação entre topologia DRM e perplexidade. Um ponto central de
+validação será comparar quatro regimes: toro explícito, toro com annealing até
+zero, geometria genérica sem alvo toroidal e ausência de regularização
+toroidal. Se regimes sem alvo toroidal mantiverem $H_1=2$, $H_2=1$ com
+estabilidade maior em escala, a evidência de emergência topológica será
+substancialmente mais forte do que no regime explicitamente prescritivo.

@@ -1,0 +1,39 @@
+\section{Arquitetura do DRM Transformer}
+\label{sec:arquitetura}
+
+O DRM Transformer mantém a estrutura decoder-only: embeddings de tokens,
+blocos autoregressivos, normalização final e cabeça de linguagem. A diferença
+principal está no bloco de atenção. Em vez de
+\begin{equation}
+  \operatorname{softmax}(QK^\top/\sqrt{d_k})V,
+\end{equation}
+o modelo calcula uma atenção por proximidade geodésica:
+\begin{equation}
+  \operatorname{Attn}_{ij}
+  = \operatorname{softmax}_j\left(-\frac{\tilde{d}_{G,ij}^2}{\tau}\right),
+\end{equation}
+onde $\tau$ é uma temperatura aprendida com piso mínimo.
+
+Queries e keys são primeiro rotacionadas por RoPE e depois projetadas para o
+manifold:
+\begin{equation}
+  q_m = \sigma(W_q q), \qquad k_m = \sigma(W_k k).
+\end{equation}
+A sigmoide mantém as coordenadas em $[0,1]$, o que facilita a regularização
+toroidal em dimensão quatro. A \emph{MetricNet} recebe $q_m$ e produz
+$U(q_m)$, fator low-rank do tensor métrico. A distância usada pela atenção é
+então a soma de uma parte euclidiana e uma parte low-rank:
+\begin{equation}
+  d_G^2(q_m,k_m)=\|q_m-k_m\|^2+
+  \|U(q_m)^\top(q_m-k_m)\|^2.
+\end{equation}
+
+O campo gravitacional associa uma massa a cada coordenada do manifold e deforma
+$U(x)$ por influência baseada em Random Fourier Features. Em termos
+interpretativos, tokens com maior massa alteram localmente a geometria de
+atenção. Em termos computacionais, isso atua como uma modulação aprendida do
+fator métrico.
+
+O \emph{DimensionalGate} aplica uma máscara suave sobre embeddings, permitindo
+que a dimensionalidade efetiva varie por token. Esse componente implementa, em
+forma neural, a ideia de que $\dim_D(p)$ pode depender do estado local.
