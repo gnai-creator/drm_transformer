@@ -266,7 +266,31 @@ python scripts/prepare_multilingual_data.py \
     --output-dir data/multilingual \
     --vocab-size 50000 \
     --finalize --clean-raw
+
+# Bridge 125M/350M: prepare o superset 350M uma vez
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual_350m \
+    --max-tokens 7000000000 \
+    --vocab-size 50000 \
+    --langs en,pt,es,fr,de
+
+python scripts/prepare_multilingual_data.py \
+    --output-dir data/multilingual_350m \
+    --vocab-size 50000 \
+    --finalize --clean-raw
+
+# Derive o dataset 125M a partir dos shards finais de 350M
+python scripts/prepare_multilingual_data.py \
+    --derive-subset-from data/multilingual_350m \
+    --output-dir data/multilingual_125m \
+    --max-tokens 3500000000 \
+    --subset-copy-mode hardlink
 ```
+
+O subset preserva o mesmo vocabulario remapeado do superset, evitando
+retokenizacao e tornando a comparacao 125M vs 350M mais justa. Em Windows,
+`--subset-copy-mode hardlink` economiza espaco quando o dataset fica no mesmo
+volume; use `copy` se o filesystem nao suportar hardlinks.
 
 ### Treinamento
 

@@ -1,5 +1,11 @@
 # ~125M params - Bridge 50M -> 350M [multilingual o200k_base 50K]
+# Dataset recomendado:
+#   1. Preparar primeiro o superset de 350M em data/multilingual_350m.
+#   2. Derivar este dataset sem retokenizar:
+#      python scripts/prepare_multilingual_data.py --derive-subset-from data/multilingual_350m --output-dir data/multilingual_125m --max-tokens 3500000000 --subset-copy-mode hardlink
 vocab_size: 50000
+data_dir: data/multilingual_125m
+eval_data_dir: data/multilingual_125m
 d_model: 768
 n_heads: 12
 n_layers: 12
@@ -60,7 +66,7 @@ geometry_warmup_steps: 5300
 geometry_schedule_start_step: 0
 geometry_schedule_end_step: 0
 save_dir: checkpoints/multilingual_125m/run_1
-save_interval: 500
+save_interval: 100
 log_interval: 50
 target_metric_var: 0.001
 save_total_limit: 5

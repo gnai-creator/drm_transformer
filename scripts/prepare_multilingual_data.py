@@ -44,6 +44,13 @@ Uso:
         --vocab-size 50000 \
         --finalize
 
+    # Derivar 125M a partir do dataset maior de 350M, sem retokenizar
+    python scripts/prepare_multilingual_data.py \
+        --derive-subset-from data/multilingual_350m \
+        --output-dir data/multilingual_125m \
+        --max-tokens 3500000000 \
+        --subset-copy-mode hardlink
+
 Requisitos:
     pip install tiktoken datasets tqdm
 """
@@ -57,8 +64,8 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-import tiktoken
-from tqdm import tqdm
+
+from shard_subset import derive_shard_subset
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +159,9 @@ def pass1_stream_and_save_raw(
     source: str = "culturax",
 ):
     """Pass 1: stream textos, tokeniza, salva shards raw uint32, conta freq."""
+    import tiktoken
+    from tqdm import tqdm
+
     raw_dir = _raw_dir(output_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
 
@@ -260,6 +270,8 @@ def pass2_remap_shards(
     max_tokens: int,
 ):
     """Pass 2: le shards raw, remapeia com vocab mapping, salva shards uint16."""
+    from tqdm import tqdm
+
     raw_dir = _raw_dir(output_dir)
     raw_files = sorted(raw_dir.glob("raw_*.npy"))
 
@@ -315,6 +327,8 @@ def pass2_remap_shards(
 
 def finalize(output_dir: Path, vocab_size: int, max_tokens: int):
     """Constroi mapping e remapeia todos os shards raw."""
+    import tiktoken
+
     freq = _load_freq(output_dir)
     if not freq:
         logger.error("[ERROR] Nenhuma frequencia encontrada. Rode pass1 primeiro.")
@@ -401,6 +415,15 @@ def main():
         "--clean-raw", action="store_true",
         help="Apagar shards raw apos finalizacao",
     )
+    parser.add_argument(
+        "--derive-subset-from", default="",
+        help="Derivar shards a partir de outro dataset ja finalizado",
+    )
+    parser.add_argument(
+        "--subset-copy-mode", default="copy",
+        choices=["copy", "hardlink", "symlink"],
+        help="Como reaproveitar shards completos ao derivar subset",
+    )
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
@@ -413,7 +436,14 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if args.finalize:
+    if args.derive_subset_from:
+        derive_shard_subset(
+            source_dir=Path(args.derive_subset_from),
+            output_dir=output_dir,
+            max_tokens=args.max_tokens,
+            mode=args.subset_copy_mode,
+        )
+    elif args.finalize:
         metadata = finalize(output_dir, args.vocab_size, args.max_tokens)
     else:
         langs = [lang.strip() for lang in args.langs.split(",")]

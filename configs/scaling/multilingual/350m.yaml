@@ -1,5 +1,10 @@
 # ~350M params - GPT-2 Medium equivalent [multilingual o200k_base 50K]
+# Dataset recomendado:
+#   python scripts/prepare_multilingual_data.py --output-dir data/multilingual_350m --max-tokens 7000000000 --vocab-size 50000 --langs en,pt,es,fr,de
+#   python scripts/prepare_multilingual_data.py --output-dir data/multilingual_350m --vocab-size 50000 --finalize --clean-raw
 vocab_size: 50000
+data_dir: data/multilingual_350m
+eval_data_dir: data/multilingual_350m
 d_model: 1024
 n_heads: 16
 n_layers: 24
@@ -60,7 +65,7 @@ geometry_warmup_steps: 10000
 geometry_schedule_start_step: 0
 geometry_schedule_end_step: 0
 save_dir: checkpoints/multilingual_350m/run_1
-save_interval: 500
+save_interval: 100
 log_interval: 50
 target_metric_var: 0.001
 save_total_limit: 5

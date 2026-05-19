@@ -243,6 +243,10 @@ Features:
 - CulturaX (default): 6.3T tokens, 167 linguas, download rapido via parquet
 - Wikipedia: publico, sem autenticacao
 - Tokenizacao: tiktoken o200k_base com remapeamento para vocab compacto (50K)
+- Subsets de escala: um dataset maior ja finalizado pode gerar datasets menores
+  com `--derive-subset-from`, preservando shards finais e vocabulario remapeado.
+  O fluxo recomendado para bridge e preparar `data/multilingual_350m` uma vez e
+  derivar `data/multilingual_125m` dos primeiros 3.5B tokens.
 
 ## Avaliacao Empirica
 
