@@ -10,7 +10,7 @@ bias: false
 batch_size: 16
 learning_rate: 0.0008
 warmup_steps: 300
-total_tokens: 100_000_000
+total_tokens: 20_000_000
 mixed_precision: bf16
 gradient_accumulation_steps: 2
 eval_interval: 500

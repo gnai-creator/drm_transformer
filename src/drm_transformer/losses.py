@@ -143,10 +143,15 @@ def intrinsic_dimension_loss(
     if flat.shape[0] < 2:
         return torch.tensor(0.0, device=coords.device, dtype=coords.dtype)
 
-    x = flat.float() - flat.float().mean(dim=0, keepdim=True)
-    cov = x.T @ x / max(flat.shape[0] - 1, 1)
-    eigvals = torch.linalg.eigvalsh(cov).clamp_min(0.0)
-    eff_dim = eigvals.sum().pow(2) / (eigvals.pow(2).sum() + eps)
+    device_type = "cuda" if flat.is_cuda else "cpu"
+    # eigvalsh nao suporta bf16 em CUDA em algumas builds do PyTorch. Alem
+    # disso, autocast pode transformar o matmul em bf16 mesmo apos .float().
+    with torch.amp.autocast(device_type=device_type, enabled=False):
+        x = flat.to(torch.float32)
+        x = x - x.mean(dim=0, keepdim=True)
+        cov = x.T @ x / max(flat.shape[0] - 1, 1)
+        eigvals = torch.linalg.eigvalsh(cov).clamp_min(0.0)
+        eff_dim = eigvals.sum().pow(2) / (eigvals.pow(2).sum() + eps)
     target = torch.as_tensor(target_dim, device=coords.device, dtype=eff_dim.dtype)
     return ((eff_dim - target) / max(float(coords.shape[-1]), 1.0)).pow(2).to(coords.dtype)
 

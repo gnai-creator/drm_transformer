@@ -6,7 +6,7 @@ Uso:
     python scripts/train_distributed.py --config configs/scaling/multilingual/15m.yaml --data-dir data/
 
     # Single GPU com resume
-    python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml --resume auto
+    python scripts/train_distributed.py --config configs/scaling/multilingual/350m.yaml --resume
 
     # Multi-GPU (4 GPUs)
     torchrun --nproc_per_node=4 scripts/train_distributed.py --config configs/scaling/multilingual/1.3b.yaml
@@ -73,6 +73,10 @@ def _find_latest_checkpoint(save_dir: str) -> str:
         return ""
     checkpoints = list(save_path.glob("step_*.pt"))
     if not checkpoints:
+        for fallback in ("final.pt", "best.pt"):
+            path = save_path / fallback
+            if path.exists():
+                return str(path)
         return ""
 
     def _step_num(p):
@@ -98,7 +102,13 @@ def _detect_vocab_size(data_dir: str) -> int:
 def main():
     parser = argparse.ArgumentParser(description="Treinamento DRM Transformer")
     parser.add_argument("--config", required=True, help="Caminho do YAML")
-    parser.add_argument("--resume", default="", help="Checkpoint ('auto' = mais recente)")
+    parser.add_argument(
+        "--resume",
+        nargs="?",
+        const="auto",
+        default="",
+        help="Retoma checkpoint. Use sem valor para auto, ou passe um caminho .pt.",
+    )
     parser.add_argument("--finetune", action="store_true", help="Fine-tune: carrega pesos, reseta step")
     parser.add_argument("--data-dir", default="", help="Override diretorio de dados")
     parser.add_argument("--eval-data-dir", default="", help="Dados de avaliacao")
