@@ -52,6 +52,7 @@ Plano de desenvolvimento do DRM Transformer.
 - [ ] Fine-tuning supervisionado (SFT)
 - [ ] Treinamento em escala 1.3B+ (multi-GPU validado)
 - [ ] Christoffel symbols e curvatura de Ricci como diagnostico
+- [ ] DRM Marco A: Manifold Attention Tensor Anatomy (`docs/future/003_drm_marco_a_manifold_attention_tensor_anatomy.md`)
 - [ ] Checkpoint intra-lingua para resume mais granular
 
 ## v1.0.0 (Longo Prazo)
