@@ -263,6 +263,35 @@ Suite de 5 testes diagnosticos + 6 visualizacoes:
 Foliation evaluator (pipeline de 9 fases): Voronoi tessellation, LTSA,
 Homologia persistente, grafo de Reeb, ARI (Adjusted Rand Index).
 
+### DRM Marco A - Manifold Attention Tensor Anatomy
+
+Marco diagnostico planejado para analisar a Geodesic Attention como tensores de
+alta ordem, inspirado por ITensors.jl / ITensorMPS.jl, mas implementado em
+PyTorch:
+
+```text
+docs/future/003_drm_marco_a_manifold_attention_tensor_anatomy.md
+```
+
+Tensores-alvo:
+
+```text
+q_manifold, k_manifold: [batch, head, token, d_manifold]
+U_before/after_gravity: [batch, head, token, d_manifold, metric_rank]
+dist_euc/dist_lr/dist_sq: [batch, head, query_token, key_token]
+attn_logits/attn_probs: [batch, head, query_token, key_token]
+```
+
+Objetivo operacional:
+
+```text
+medir rank efetivo, espectro singular, entropia de atencao, compressibilidade,
+redundancia por head/layer e efeito de gravity/gamma no tensor de atencao.
+```
+
+Essas metricas podem orientar pruning, compressao, selecao de layers/heads para
+SAINT-G grafting, ou otimizacoes futuras da atencao geometrica.
+
 ## Parametros de Configuracao
 
 | Parametro | Tipo | Default | Descricao |

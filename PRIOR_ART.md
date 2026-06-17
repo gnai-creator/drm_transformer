@@ -77,6 +77,64 @@ os conceitos originais se apoiam.
   Embeddings em espacos hiperbolicos para hierarquias. O DRM usa geometria
   Riemanniana geral (nao restrita a Poincare) com tensor metrico aprendivel.
 
+### Tensor Networks e Analise Tensorial
+
+- **Fishman, White & Stoudenmire (2022)** - "The ITensor Software Library for
+  Tensor Network Calculations". ITensor/ITensors.jl e uma biblioteca de tensor
+  networks com indices nomeados/taggeados, SVD/truncated-SVD, contracao por
+  indices e suporte a estruturas MPS/MPO via ITensorMPS.jl.
+  **Relacao com DRM:** nao e uma dependencia direta do DRM Transformer, mas e
+  prior art relevante para o DRM Marco A: Manifold Attention Tensor Anatomy,
+  onde a Geodesic Attention e analisada como tensores de alta ordem
+  [layer, head, token, manifold_dim, metric_rank], com rank efetivo,
+  compressibilidade e erro de truncamento.
+
+  Repositorios:
+  - ITensors.jl: [github.com/ITensor/ITensors.jl](https://github.com/ITensor/ITensors.jl)
+  - ITensorMPS.jl: [github.com/ITensor/ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl)
+
+### Activation-Space Controllers e NTK-Style Sensitivity
+
+- **Chlon (2026)** - "NTK-Mirror: LoRA-free forward-pass fine-tuning via signed
+  log-mask controllers". NTK-Mirror treina controladores esparsos de ativacao
+  sobre canais de layers decoder congeladas:
+
+  ```text
+  h'_{layer, token, channel} = exp(s_{layer, channel}) h_{layer, token, channel}
+  dL/ds_{l,c} = sum_t <dL/dh_{l,t,c}, h_{l,t,c}>
+  ```
+
+  **Relacao com DRM:** nao substitui a Geodesic Attention. A relevancia e como
+  prior art para diagnosticos de sensibilidade local em espaco de ativacao e
+  para uma ponte futura com SAINT-G, onde scores do tipo `sum(abs(grad_h * h))`
+  podem ajudar a escolher layers/heads/canais para grafting ou pruning.
+
+  Repositorio:
+  - NTK-Mirror: [github.com/leochlon/ntkmirror](https://github.com/leochlon/ntkmirror)
+
+### Citacoes BibTeX
+
+```bibtex
+@article{ITensor,
+  title={{The ITensor Software Library for Tensor Network Calculations}},
+  author={Matthew Fishman and Steven R. White and E. Miles Stoudenmire},
+  journal={SciPost Phys. Codebases},
+  pages={4},
+  year={2022},
+  publisher={SciPost},
+  doi={10.21468/SciPostPhysCodeb.4},
+  url={https://scipost.org/10.21468/SciPostPhysCodeb.4}
+}
+
+@software{chlon2026ntkmirror,
+  author       = {Leon Chlon},
+  title        = {{NTK-Mirror: LoRA-free forward-pass fine-tuning via signed log-mask controllers}},
+  year         = {2026},
+  organization = {Hassana Labs},
+  url          = {https://github.com/leochlon/ntkmirror}
+}
+```
+
 ---
 
 ## Resumo

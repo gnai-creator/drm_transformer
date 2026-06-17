@@ -383,6 +383,33 @@ results = evaluator.evaluate(loader, max_tokens=100_000)
 print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
 ```
 
+### DRM Marco A - Manifold Attention Tensor Anatomy
+
+Diagnostico planejado, inspirado por ITensors.jl / ITensorMPS.jl, para analisar
+a Geodesic Attention como tensores de alta ordem e medir rank efetivo,
+compressibilidade, entropia de atencao, redundancia por head/layer e efeito de
+gravity/gamma.
+
+Documento de design:
+
+```text
+docs/future/003_drm_marco_a_manifold_attention_tensor_anatomy.md
+```
+
+Comando futuro sugerido:
+
+```bash
+python \
+  scripts/analyze_manifold_attention_tensor_anatomy.py \
+  --checkpoint /mnt/e/dev/ai/drm_transformer/checkpoints/multilingual_5m/smoke_819k/final.pt \
+  --config configs/scaling/multilingual/5m.yaml \
+  --data-dir /mnt/e/dev/ai/drm_transformer/data/multilingual_125m \
+  --device cuda \
+  --batches 16 \
+  --seq-len 128 \
+  --output-dir runs/drm_marco_a_manifold_attention_tensor_anatomy
+```
+
 ### Validacao Empirica (testes + figuras)
 
 ```bash
