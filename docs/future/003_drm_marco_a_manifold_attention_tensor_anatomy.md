@@ -2,6 +2,7 @@
 
 **Status:** planejado / design documentado  
 **Origem:** ideias de tensor networks e truncated-SVD inspiradas por ITensors.jl / ITensorMPS.jl  
+
 **Escopo:** diagnostico offline do DRM Transformer, sem alterar o treinamento principal
 
 ## 1. Objetivo
