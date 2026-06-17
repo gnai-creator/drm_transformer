@@ -66,7 +66,7 @@ class FeedForward(nn.Module):
 class DRMTransformerBlock(nn.Module):
     """Bloco do DRM Transformer com pre-norm e residual connections.
 
-    Usa DRMAttention (distancia geodesica) em vez de attention padrao.
+    Usa DRMAttention (distancia Riemanniana low-rank) em vez de attention padrao.
 
     Args:
         config: Configuracao do DRM Transformer.

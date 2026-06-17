@@ -194,7 +194,11 @@ class DRMTrainer:
         U = metric_net(coords)  # [1, 16, D, r]
 
         # U(x) estatisticas (low-rank)
-        metrics["metric_U_norm_mean"] = U.pow(2).sum(dim=-2).sqrt().mean().item()
+        U_norm = U.pow(2).sum(dim=-2).sqrt()
+        metrics["metric_U_norm_mean"] = U_norm.mean().item()
+        metrics["metric_U_norm_std"] = U_norm.std(unbiased=False).item()
+        metrics["metric_U_variance"] = U.var(unbiased=False).item()
+        metrics["metric_condition_proxy"] = (1.0 + U_norm.pow(2).amax()).item()
         metrics["metric_U_rank"] = float(metric_net.rank)
         # Eixos: norma media por eixo semantico
         axis_norms = U.pow(2).sum(dim=-2).sqrt().mean(dim=(0, 1))  # [r]
@@ -219,6 +223,10 @@ class DRMTrainer:
         if hasattr(model, "blocks") and len(model.blocks) > 0:
             temp = model.blocks[0].attn.temperature
             metrics["temperature"] = temp.item()
+            attn_metrics = getattr(model.blocks[0].attn, "last_distance_diagnostics", {})
+            for key, value in attn_metrics.items():
+                if key not in metrics and torch.is_tensor(value):
+                    metrics[key] = value.float().item()
 
         # Diversity ativo?
         warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
@@ -295,6 +303,7 @@ class DRMTrainer:
             intrinsic_dimension_loss,
             coverage_entropy_loss,
             torus_regularization_loss,
+            anchor_alignment_loss,
         )
 
         lambda_reg = self.config.get("lambda_metric_reg", 0.001)
@@ -303,8 +312,10 @@ class DRMTrainer:
         lambda_intrinsic_dim = self._scheduled_value("lambda_intrinsic_dim", 0.0)
         lambda_coverage = self._scheduled_value("lambda_coverage", 0.0)
         lambda_torus = self._scheduled_value("lambda_torus", 0.0)
+        lambda_anchor = self.config.get("lambda_anchor_alignment", 0.0)
         warmup_div = self.config.get("metric_diversity_warmup_steps", 5000)
         warmup_geometry = self.config.get("geometry_warmup_steps", warmup_div)
+        warmup_anchor = self.config.get("anchor_alignment_warmup_steps", warmup_geometry)
 
         # Extrair coords reais do batch via block 0
         # Mantemos gradiente em coords para perdas que combatem colapso do
@@ -375,6 +386,14 @@ class DRMTrainer:
         if self.global_step >= warmup_div:
             target_var = self.config.get("target_metric_var", 0.001)
             drm_loss = drm_loss + lambda_div * metric_diversity_loss(U, target_var)
+
+        anchors = getattr(model, "anchors", None)
+        if lambda_anchor > 0 and anchors is not None and self.global_step >= warmup_anchor:
+            drm_loss = drm_loss + lambda_anchor * anchor_alignment_loss(
+                U,
+                coords,
+                anchors,
+            )
 
         return drm_loss
 

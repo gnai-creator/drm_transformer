@@ -1,9 +1,9 @@
-"""DRM Attention com distancia geodesica low-rank, RoPE e gamma-scaling."""
+"""DRM Attention com distancia Riemanniana low-rank, RoPE e gamma-scaling."""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from .config import DRMTransformerConfig
 from .metric_net import MetricNet
@@ -63,12 +63,18 @@ def apply_rope(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.T
 
 
 class DRMAttention(nn.Module):
-    """Multi-Head Attention com distancia geodesica low-rank no manifold DRM.
+    """Multi-Head Attention com distancia Riemanniana low-rank no manifold DRM.
 
     Usa score(i,j) = -d_G(q_i, k_j) / temp em vez de dot product,
-    onde d_G e a distancia sob G(x) = I + U(x) U(x)^T.
+    onde d_G e uma distancia local ou aproximacao por quadratura sob
+    G(x) = I + U(x) U(x)^T.
 
-    dist^2 = ||delta||^2 + ||U^T delta||^2
+    Modo local:
+        dist^2 = ||delta||^2 + ||U(q)^T delta||^2
+
+    Modo quadrature:
+        aproxima o comprimento do segmento q-k integrando
+        sqrt(dx^T G(x(t)) dx), com x(t) = (1-t)q + tk.
 
     Complexidade: O(T^2 * D * r) onde r e o rank (tipicamente 4).
 
@@ -85,6 +91,16 @@ class DRMAttention(nn.Module):
         self.gamma_enabled = config.gamma_enabled
         self.gamma_c = config.gamma_c
         self.gamma_alpha = getattr(config, "gamma_alpha", 0.0)
+        self.distance_mode = getattr(config, "distance_mode", "local")
+        self.quad_points = int(getattr(config, "quad_points", 0) or getattr(config, "n_quad", 0))
+        if self.distance_mode == "quadrature" and self.quad_points <= 0:
+            self.distance_mode = "local"
+        if self.distance_mode not in ("local", "quadrature"):
+            raise ValueError(f"distance_mode must be 'local' or 'quadrature', got {self.distance_mode!r}")
+        self.distance_chunk_size = int(getattr(config, "distance_chunk_size", 0) or 0)
+        self.last_distance_diagnostics: Dict[str, torch.Tensor] = {}
+        self.last_distance_components: Dict[str, torch.Tensor] = {}
+        self.last_attention: Optional[torch.Tensor] = None
 
         assert config.d_model % config.n_heads == 0
 
@@ -105,6 +121,110 @@ class DRMAttention(nn.Module):
 
         self.attn_dropout = nn.Dropout(config.dropout)
         self.resid_dropout = nn.Dropout(config.dropout)
+
+    def _quadrature_grid(self, device: torch.device, dtype: torch.dtype) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Retorna pontos/pesos midpoint em [0, 1] para integracao estavel."""
+        n = max(int(self.quad_points), 1)
+        t = (torch.arange(n, device=device, dtype=dtype) + 0.5) / n
+        w = torch.full((n,), 1.0 / n, device=device, dtype=dtype)
+        return t, w
+
+    def _local_distance(
+        self,
+        q_manifold: torch.Tensor,
+        k_manifold: torch.Tensor,
+        U: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Distancia local low-rank avaliada em G(q)."""
+        delta = q_manifold.unsqueeze(3) - k_manifold.unsqueeze(2)
+        dist_euc = delta.pow(2).sum(dim=-1)
+        U_exp = U.unsqueeze(3)
+        delta_col = delta.unsqueeze(-1)
+        Ut_delta = torch.matmul(U_exp.transpose(-1, -2), delta_col).squeeze(-1)
+        dist_lr = Ut_delta.pow(2).sum(dim=-1)
+        dist_sq = (dist_euc + dist_lr).clamp(min=0.0)
+        return dist_sq, dist_euc, dist_lr
+
+    def _quadrature_distance(
+        self,
+        q_manifold: torch.Tensor,
+        k_manifold: torch.Tensor,
+        metric_net: MetricNet,
+        gravity_field: Optional[GravityField] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Aproxima comprimento Riemanniano no segmento q-k por quadratura.
+
+        Retorna ``length^2`` para manter a escala do modo local usada pelo
+        softmax da atencao.
+        """
+        B, H, T, D = q_manifold.shape
+        chunk = self.distance_chunk_size if self.distance_chunk_size > 0 else T
+        t_grid, w_grid = self._quadrature_grid(q_manifold.device, q_manifold.dtype)
+
+        dist_sq_parts = []
+        dist_euc_parts = []
+        dist_lr_parts = []
+        k_all = k_manifold.unsqueeze(2)
+
+        for start in range(0, T, chunk):
+            end = min(start + chunk, T)
+            q_chunk = q_manifold[:, :, start:end, :]
+            delta = q_chunk.unsqueeze(3) - k_all
+            dist_euc = delta.pow(2).sum(dim=-1)
+            delta_for_path = -delta
+
+            weighted_length = torch.zeros_like(dist_euc)
+            weighted_lr = torch.zeros_like(dist_euc)
+            for t, w in zip(t_grid, w_grid):
+                x_t = (1.0 - t) * q_chunk.unsqueeze(3) + t * k_all
+                U_t = metric_net(x_t.reshape(-1, D)).view(B, H, end - start, T, D, metric_net.rank)
+                if gravity_field is not None:
+                    U_grav = []
+                    for h in range(H):
+                        coords_h = x_t[:, h].reshape(B, -1, D)
+                        U_h = U_t[:, h].reshape(B, -1, D, metric_net.rank)
+                        mass_h = gravity_field.compute_mass(coords_h)
+                        U_h = gravity_field.deform_U(U_h, coords_h, mass_h)
+                        U_grav.append(U_h.view(B, end - start, T, D, metric_net.rank))
+                    U_t = torch.stack(U_grav, dim=1)
+                Ut_delta = torch.matmul(
+                    U_t.transpose(-1, -2),
+                    delta_for_path.unsqueeze(-1),
+                ).squeeze(-1)
+                dist_lr_t = Ut_delta.pow(2).sum(dim=-1)
+                integrand = (dist_euc + dist_lr_t).clamp_min(1e-12).sqrt()
+                weighted_length = weighted_length + w * integrand
+                weighted_lr = weighted_lr + w * dist_lr_t
+
+            dist_sq_parts.append(weighted_length.pow(2).clamp(min=0.0))
+            dist_euc_parts.append(dist_euc)
+            dist_lr_parts.append(weighted_lr.clamp(min=0.0))
+
+        return (
+            torch.cat(dist_sq_parts, dim=2),
+            torch.cat(dist_euc_parts, dim=2),
+            torch.cat(dist_lr_parts, dim=2),
+        )
+
+    @staticmethod
+    def _distance_diagnostics(
+        U: torch.Tensor,
+        dist_euc: torch.Tensor,
+        dist_lr: torch.Tensor,
+    ) -> Dict[str, torch.Tensor]:
+        """Metricas compactas para detectar colapso ou efeito real de U."""
+        eps = torch.as_tensor(1e-8, device=dist_euc.device, dtype=dist_euc.dtype)
+        U_norm = U.pow(2).sum(dim=-2).sqrt()
+        dist_delta = dist_lr
+        return {
+            "metric_U_norm_mean": U_norm.mean().detach(),
+            "metric_U_norm_std": U_norm.std(unbiased=False).detach(),
+            "metric_U_variance": U.var(unbiased=False).detach(),
+            "metric_condition_proxy": (1.0 + U_norm.pow(2).amax()).detach(),
+            "geodesic_vs_euclidean_delta_mean": dist_delta.mean().detach(),
+            "geodesic_vs_euclidean_delta_std": dist_delta.std(unbiased=False).detach(),
+            "dist_lr_fraction": (dist_lr / (dist_euc + dist_lr + eps)).mean().detach(),
+        }
 
     def forward(
         self,
@@ -155,23 +275,18 @@ class DRMAttention(nn.Module):
                 U_heads.append(U_h)
             U = torch.stack(U_heads, dim=1)
 
-        # Distancia low-rank: dist^2 = ||delta||^2 + ||U^T delta||^2
-        # Complexidade: O(T^2 * D * r)
-        delta = q_manifold.unsqueeze(3) - k_manifold.unsqueeze(2)  # [B, H, T, T, D]
-
-        # Parte euclidiana: ||delta||^2
-        dist_euc = (delta ** 2).sum(dim=-1)  # [B, H, T, T]
-
-        # Parte low-rank: ||U^T delta||^2
-        # U: [B, H, T, D, r] -> U_exp: [B, H, T, 1, D, r]
-        U_exp = U.unsqueeze(3)
-        delta_col = delta.unsqueeze(-1)  # [B, H, T, T, D, 1]
-        Ut_delta = torch.matmul(
-            U_exp.transpose(-1, -2), delta_col,
-        ).squeeze(-1)  # [B, H, T, T, r]
-        dist_lr = (Ut_delta ** 2).sum(dim=-1)  # [B, H, T, T]
-
-        dist_sq = (dist_euc + dist_lr).clamp(min=0.0)
+        if self.distance_mode == "quadrature":
+            dist_sq, dist_euc, dist_lr = self._quadrature_distance(
+                q_manifold, k_manifold, metric_net, gravity_field,
+            )
+        else:
+            dist_sq, dist_euc, dist_lr = self._local_distance(q_manifold, k_manifold, U)
+        self.last_distance_diagnostics = self._distance_diagnostics(U, dist_euc, dist_lr)
+        self.last_distance_components = {
+            "dist_sq": dist_sq.detach(),
+            "dist_euc": dist_euc.detach(),
+            "dist_lr": dist_lr.detach(),
+        }
 
         # Gamma-scaling com log-gamma + annealing + clamp
         if self.gamma_enabled and anchor_coords is not None:
@@ -205,6 +320,7 @@ class DRMAttention(nn.Module):
         attn = attn.masked_fill(causal_mask, float("-inf"))
 
         attn = F.softmax(attn, dim=-1)
+        self.last_attention = attn.detach()
         attn = self.attn_dropout(attn)
 
         out = torch.matmul(attn, v)

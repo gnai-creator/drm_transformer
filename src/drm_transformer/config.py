@@ -18,7 +18,11 @@ class DRMTransformerConfig:
         bias: Usar bias nas camadas lineares.
         d_manifold: Dimensao do manifold epistemico.
         metric_hidden: Dimensao oculta do MetricNet.
-        n_quad: Pontos de quadratura Gauss-Legendre (0=Mahalanobis local).
+        distance_mode: "local" para Mahalanobis low-rank em G(q) ou
+            "quadrature" para integrar G(x(t)) no segmento q-k.
+        quad_points: Pontos de quadratura. Se omitido, herda n_quad.
+        distance_chunk_size: Numero de query tokens por chunk na quadratura.
+        n_quad: Alias legado de quad_points (0=modo local).
         gamma_enabled: Ativar gamma-scaling relativistic.
         gamma_c: Velocidade limite c para gamma-scaling.
         gravity_enabled: Ativar campo gravitacional.
@@ -39,6 +43,9 @@ class DRMTransformerConfig:
     metric_hidden: int = 64
     metric_rank: int = 4
     n_quad: int = 0
+    distance_mode: str = "local"
+    quad_points: int = 0
+    distance_chunk_size: int = 0
 
     n_anchors: int = 6
 

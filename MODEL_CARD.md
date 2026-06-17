@@ -14,8 +14,11 @@
 
 Transformer decoder-only onde o espaco de embeddings vive num Directional
 Relational Manifold (DRM). A atencao padrao (dot-product) e substituida por
-Geodesic Attention com tensor metrico aprendido G(x), campo gravitacional
-por token e dimensionalidade variavel.
+Low-Rank Riemannian Attention com tensor metrico aprendido
+`G(x)=I+U(x)U(x)^T`, campo gravitacional por token e dimensionalidade variavel.
+O modo default usa uma distancia local tipo Mahalanobis; o modo opcional de
+quadratura aproxima o comprimento do segmento q-k. O projeto e experimental e
+nao valida uma geodesica formal plena nem alinhamento/safety definitivos.
 
 ## Dados de Treino
 
@@ -30,6 +33,13 @@ por token e dimensionalidade variavel.
 ## Configuracoes Disponiveis
 
 12 scaling configs de 1M a 640B parametros. Baseline canonico: small_3.5M (3.5M params).
+
+## Current Empirical Status
+
+O status atual e implementavel e experimental. Os resultados abaixo sao de um
+baseline pequeno (3.5M parametros, 10M tokens Wikipedia EN), uteis para
+sanidade de engenharia e ablations iniciais. Eles nao demonstram superioridade
+sobre Transformers padrao nem validam claims cientificos gerais.
 
 ## Metricas (Baseline small_3.5M, seed=42, 10M tokens Wikipedia EN)
 
@@ -55,11 +65,12 @@ por token e dimensionalidade variavel.
 
 ### Topologia DRM
 
-Resultado de Voronoi Foliation no baseline small_3.5M:
+Resultado de Voronoi Foliation no baseline small_3.5M sob regularizacao
+toroidal configurada:
 
 | Metrica | Valor |
 |---------|-------|
-| Topologia | torus T^2 (stable) |
+| Topologia | assinatura compativel com T^2 sob regularizacao |
 | H1 long bars | 2 |
 | H2 long bars | 1 |
 | T2 stable fraction | 0.60 |
@@ -83,19 +94,23 @@ python scripts/voronoi_foliation_drm.py \
     --homology-restarts 5
 ```
 
-O resultado valida a assinatura topologica `H1=2, H2=1` de forma estavel pelo
-criterio `t2_stable_fraction >= 0.60`. A geometria local ainda e experimental:
-LTSA indicou uma nuvem espessa em 4D em alguns runs, entao este resultado deve
-ser lido como topologia persistente estavel, nao como uma parametrizacao
-toroidal perfeitamente fina.
+O resultado mostra uma assinatura `H1=2, H2=1` estavel pelo criterio
+`t2_stable_fraction >= 0.60` nesse regime. Como `lambda_torus > 0` induz
+explicitamente estrutura toroidal, isso nao prova emergencia espontanea de um
+toro. A recomendacao cientifica e comparar contra `configs/ablations/no_torus.yaml`
+e relatar homologia, LTSA e metricas de linguagem nos dois regimes.
 
 ## Limitacoes
 
 - **Escala atual**: baseline testado com 3.5M params / 10M tokens. Resultados
   em escala (350M+) ainda em andamento.
-- **Geometria topologica**: `H1=2, H2=1` foi validado no baseline pequeno, mas
-  a limpeza local do manifold ainda depende de pesos de regularizacao toroidal.
+- **Geometria topologica**: `H1=2, H2=1` foi observado no baseline pequeno sob
+  regularizacao toroidal; isso e inducao por loss quando `lambda_torus > 0`.
 - **Benchmarks**: HellaSwag, ARC e MMLU pendentes -- requerem modelo em escala.
+- **Anchors**: truth/safety/grounding sao priors geometricos interpretaveis.
+  Validacao semantica exige probes rotulados como `scripts/eval_anchor_probe.py`.
+- **MetricNet**: diagnosticos de `dist_lr_fraction` e norma de U devem ser
+  monitorados para evitar uma geometria quase Euclidiana nao detectada.
 - **Linguas**: treinado em 5 linguas europeias. Performance em outras linguas
   nao avaliada.
 - **Determinismo multi-GPU**: NCCL pode introduzir nao-determinismo.
@@ -112,6 +127,8 @@ toroidal perfeitamente fina.
 - **Producao**: modelo experimental, nao validado para uso em producao
 - **Tarefas criticas**: sem avaliacao de seguranca ou bias sistematico
 - **Substituicao de modelos existentes**: nao superou benchmarks padrao (ainda)
+- **Alinhamento definitivo**: anchors semanticos e gamma-scaling nao constituem
+  prova de alinhamento, factualidade ou seguranca.
 
 ## Riscos
 
@@ -135,7 +152,7 @@ Ver `repro.md` para guia detalhado.
 ```bibtex
 @software{muniz2026drm,
   author = {Muniz, Felipe Maya},
-  title = {DRM Transformer: Decoder-only Transformer with Geodesic Attention},
+  title = {DRM Transformer: Decoder-only Transformer with Low-Rank Riemannian Attention},
   year = {2026},
   url = {https://github.com/gnai-creator/drm_transformer},
 }

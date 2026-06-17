@@ -7,9 +7,10 @@ import torch.nn as nn
 class MetricNet(nn.Module):
     """Computa fator low-rank U(x) do tensor metrico G(x) = I + U U^T.
 
-    Cada coluna de U(x) representa um eixo semantico de curvatura
-    (e.g., safety, truth, grounding). A metrica resultante e SPD
-    por construcao (I + U U^T tem autovalores >= 1).
+    Cada coluna de U(x) representa um eixo geometrico de curvatura. Esses eixos
+    podem ser comparados a anchors interpretaveis, mas nao sao semantica
+    supervisionada por si so. A metrica resultante e SPD por construcao
+    (I + U U^T tem autovalores >= 1).
 
     Complexidade: O(D * r) por ponto, vs O(D^2) para metrica full.
 
@@ -56,7 +57,7 @@ class MetricNet(nn.Module):
             coords: [..., dim] coordenadas no manifold.
 
         Returns:
-            Tensor [..., dim, rank] com eixos semanticos de curvatura.
+            Tensor [..., dim, rank] com eixos geometricos de curvatura.
         """
         raw = self.net(coords)
 

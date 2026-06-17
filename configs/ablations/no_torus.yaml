@@ -1,5 +1,5 @@
 # Ablation: no_torus
-# Variante para avaliar emergencia topologica sem depender sempre da loss toroidal explicita.
+# Variante para comparar topologia sem loss toroidal explicita.
 
 # --- Modelo ---
 vocab_size: 50000
@@ -32,6 +32,9 @@ d_manifold: 4
 metric_hidden: 16
 metric_rank: 4
 n_quad: 0
+distance_mode: local
+quad_points: 0
+distance_chunk_size: 0
 
 # --- Gamma-Scaling ---
 gamma_enabled: true
@@ -71,6 +74,8 @@ geometry_schedule_start_step: 0
 geometry_schedule_end_step: 0
 metric_diversity_warmup_steps: 500
 target_metric_var: 0.001
+lambda_anchor_alignment: 0.0
+anchor_alignment_warmup_steps: 500
 
 # --- Checkpointing ---
 save_dir: checkpoints/ablations/no_torus

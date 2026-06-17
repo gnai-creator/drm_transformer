@@ -14,11 +14,11 @@ from .manifold import create_semantic_anchors
 
 
 class DRMTransformer(nn.Module):
-    """DRM Transformer: decoder-only com geometria geodesica e gravidade.
+    """DRM Transformer: decoder-only com geometria DRM e gravidade.
 
-    Attention usa distancia geodesica sob G(x) aprendida em vez de
-    dot product Euclidiano. Tokens com alta informacao criam curvatura
-    gravitacional que afeta a attention de outros tokens.
+    Attention usa distancia Riemanniana local ou aproximada por quadratura sob
+    G(x) aprendido em vez de dot product Euclidiano. Tokens com alta informacao
+    criam deformacao gravitacional que afeta a attention de outros tokens.
 
     Args:
         config: Configuracao do DRM Transformer.

@@ -9,7 +9,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776ab.svg)](https://python.org)
 [![PyTorch 2.0+](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org)
 [![Configs](https://img.shields.io/badge/Scaling-1M%20to%20640B-green.svg)](configs/scaling/multilingual/)
-[![Architecture](https://img.shields.io/badge/Attention-Geodesic-blueviolet.svg)](#inovacoes-principais)
+[![Architecture](https://img.shields.io/badge/Attention-Low--Rank%20Riemannian-blueviolet.svg)](#inovacoes-principais)
 [![Papers](https://img.shields.io/badge/Papers-3%20DRM-yellow.svg)](#papers)
 [![Foliation](https://img.shields.io/badge/Near--T2-seed--robust-orange.svg)](repro.md#controles-topologicos)
 
@@ -34,9 +34,12 @@ Decoder-only Transformer onde o espaco de embeddings vive num Directional
 Relational Manifold (DRM) com tensor metrico aprendido G(x) dependente de
 posicao, curvatura gravitacional derivada da massa dos tokens, e
 dimensionalidade variavel por token. A atencao padrao (dot-product) e
-substituida por Geodesic Attention: a distancia entre queries e keys e
-computada sob G(x), e o fator de escala segue dinamica relativistica
-(gamma-scaling do fator de Lorentz).
+substituida por Low-Rank Riemannian Attention: por default, a distancia entre
+queries e keys e uma distancia Mahalanobis local em G(q). Opcionalmente, o modo
+`distance_mode: quadrature` aproxima o comprimento do segmento q-k integrando
+G(x(t)). Isso e geodesic-inspired, mas nao equivale a resolver uma geodesica
+formal plena no manifold aprendido. O modelo e experimental e nao e validado
+para producao, seguranca critica ou alinhamento definitivo.
 
 ---
 
@@ -45,7 +48,7 @@ computada sob G(x), e o fator de escala segue dinamica relativistica
 | Componente | Transformer Padrao | DRM Transformer | Analogia |
 |---|---|---|---|
 | **Espaco de embeddings** | R^d plano, Euclidiano | Manifold curvo com metrica G(x) | Mapa plano vs superficie da Terra: distancias reais dependem do terreno |
-| **Attention score** | dot-product: q^T k | Distancia geodesica: -d_G(q,k)/temp | Medir "proximidade" em linha recta vs seguir o caminho real pelo terreno |
+| **Attention score** | dot-product: q^T k | Distancia Riemanniana local ou quadrature-inspired: -d_G(q,k)/temp | Medir proximidade sob uma regua aprendida, sem alegar geodesica exata |
 | **Metrica** | Fixa (identidade implicita) | Aprendida por posicao: G(x) = I + U(x) U(x)^T (low-rank) | Regua rigida vs regua elastica que estica conforme o lugar |
 | **Tokens de alta informacao** | Tratados igual a todos os outros | Deformam a metrica local (gravidade) | Estrela que curva o espaco-tempo a sua volta, atraindo o que esta perto |
 | **Dimensionalidade** | Fixa: todos os tokens usam d dimensoes | Variavel: dimD(p) por token via gate suave | Sala de d portas onde tokens simples abrem 3 e tokens complexos abrem todas |
@@ -61,8 +64,10 @@ num mapa plano e navegar na superficie real de um planeta.
 
 ## Inovacoes Principais
 
-1. **Geodesic Attention** -- Distancia geodesica sob G(x) substitui dot-product
-   Euclidiano. Tokens proximos no manifold recebem mais atencao.
+1. **Low-Rank Riemannian Attention** -- Distancia local em G(q), ou aproximacao
+   por quadratura no segmento q-k, substitui dot-product Euclidiano. Tokens
+   proximos no manifold recebem mais atencao. A implementacao atual nao resolve
+   equacoes geodesicas completas.
 2. **MetricNet** -- Tensor metrico G(x) = I + U(x)U(x)^T aprendido via MLP
    com factorizacao low-rank (rank=4). SPD garantido por construcao. Output
    zero-inicializado (G(x)=I no inicio, estabilidade). Geometria end-to-end.
@@ -75,7 +80,8 @@ num mapa plano e navegar na superficie real de um planeta.
    adaptativamente a resolucao metrica conforme a distancia aos anchors no manifold.
 6. **Semantic Anchors** -- 6 pontos de referencia no manifold com significado
    interpretavel (truth, ignorance, safety, complexity, creativity, grounding).
-   Inicializados com posicoes semanticas, aprendiveis pelo optimizer.
+   Inicializados com posicoes semanticas, aprendiveis pelo optimizer. Sao priors
+   geometricos interpretaveis, nao prova automatica de truth/safety/grounding.
 
 ### Anchors Semanticos
 
@@ -89,7 +95,8 @@ num mapa plano e navegar na superficie real de um planeta.
 | grounding | Factualidade, evidencia | Ancora para tokens factuais |
 
 Os anchors sao `nn.Parameter` -- o optimizer pode move-los durante o treino.
-A inicializacao semantica fornece um prior geometrico interpretavel.
+A inicializacao semantica fornece um prior geometrico interpretavel. Validacao
+semantica requer probes rotulados, por exemplo `scripts/eval_anchor_probe.py`.
 
 ---
 
@@ -160,7 +167,10 @@ A inicializacao semantica fornece um prior geometrico interpretavel.
 | `d_manifold` | int | 16 | Dimensao do manifold |
 | `metric_hidden` | int | 64 | Largura do hidden layer do MetricNet |
 | `metric_rank` | int | 4 | Rank de U(x) em G(x) = I + UU^T |
-| `n_quad` | int | 0 | Pontos de quadratura Gauss-Legendre (0 = Mahalanobis local) |
+| `distance_mode` | str | local | `local` para Mahalanobis low-rank em G(q); `quadrature` para comprimento aproximado no segmento q-k |
+| `quad_points` | int | 0 | Pontos de quadratura; herda `n_quad` em configs antigas |
+| `distance_chunk_size` | int | 0 | Chunk opcional de query tokens para reduzir memoria na quadratura |
+| `n_quad` | int | 0 | Alias legado para pontos de quadratura (0 = modo local) |
 | `n_anchors` | int | 6 | Numero de anchors semanticos |
 | `gamma_enabled` | bool | True | Habilitar gamma-scaling (Lorentz) |
 | `gamma_c` | float | 4.0 | Limite de velocidade (c) |
@@ -213,6 +223,12 @@ Pesos configurados no YAML de treino, fora de `DRMTransformerConfig`.
 | `geometry_warmup_steps` | 500 | Inicio das losses geometricas |
 | `geometry_schedule_start_step` | 500 | Inicio do schedule linear |
 | `geometry_schedule_end_step` | 2441 | Fim do schedule linear |
+| `lambda_anchor_alignment` | 0.0 | Peso opcional do alinhamento entre U e anchors |
+| `anchor_alignment_warmup_steps` | `geometry_warmup_steps` | Inicio opcional da loss de anchors |
+
+Nota topologica: quando `lambda_torus > 0`, a assinatura toroidal e induzida por
+regularizacao explicita. Para testar emergencia espontanea, compare com
+`configs/ablations/no_torus.yaml` e rode a avaliacao de homologia nos dois regimes.
 
 ---
 
@@ -364,12 +380,13 @@ python scripts/voronoi_foliation_drm.py \
 ```
 
 Saidas: `foliation_results.json` com F-score, H1/H2, ARI, coherence, Reeb graph.
-Baseline atual: assinatura near-toroidal robusta a seeds. Em controles
+Baseline atual: assinatura near-toroidal sob regularizacao toroidal. Em controles
 topologicos, o random init ficou em `Near T2=0.0`, enquanto seeds treinadas
 ficaram em `Near T2 >= 0.6`; duas de tres seeds recuperaram `H1=2`, `H2=1`
 como topologia mediana. O criterio estrito `T2 stable >= 0.60` ainda nao foi
 atingido, portanto o resultado deve ser descrito como *near-stable toroidal
-signature*, nao como toro estavel final.
+signature* induzida/avaliada nesse regime, nao como emergencia espontanea nem
+como toro estavel final.
 
 ### Avaliacao via API Python
 
@@ -386,7 +403,7 @@ print(f"F={results['foliation_score']:.4f}, topology={results['topology']}")
 ### DRM Marco A - Manifold Attention Tensor Anatomy
 
 Diagnostico planejado, inspirado por ITensors.jl / ITensorMPS.jl, para analisar
-a Geodesic Attention como tensores de alta ordem e medir rank efetivo,
+a atencao Riemanniana DRM como tensores de alta ordem e medir rank efetivo,
 compressibilidade, entropia de atencao, redundancia por head/layer e efeito de
 gravity/gamma.
 

@@ -1,4 +1,4 @@
-"""DRM Transformer: Transformer com geometria geodesica e gravidade."""
+"""DRM Transformer: Transformer com atencao Riemanniana low-rank e gravidade."""
 
 from .config import DRMTransformerConfig
 from .model import DRMTransformer

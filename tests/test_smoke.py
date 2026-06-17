@@ -242,6 +242,7 @@ def test_config_consistency():
         "torus_isotropy_weight", "torus_independence_weight",
         "torus_harmonic_weight", "geometry_warmup_steps",
         "lambda_torus_start", "lambda_torus_end",
+        "lambda_anchor_alignment", "anchor_alignment_warmup_steps",
         "geometry_schedule_start_step", "geometry_schedule_end_step",
         "weight_decay", "adam_beta1", "adam_beta2",
         "max_grad_norm", "min_lr_ratio",

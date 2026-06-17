@@ -9,9 +9,11 @@ token com uma geometria Riemanniana aprendida: o tensor metrico G(x) varia
 por posicao, tokens possuem massa que deforma a metrica (gravidade), e a
 dimensionalidade efetiva D(p) varia por token via DimensionalGate.
 
-A atencao padrao (dot-product) e substituida por **Geodesic Attention**:
-a distancia entre queries e keys e computada sob G(x), e o fator de escala
-segue a dinamica relativistica (gamma-scaling do fator de Lorentz).
+A atencao padrao (dot-product) e substituida por **Low-Rank Riemannian
+Attention**. No modo default, a distancia e uma Mahalanobis local em G(q). No
+modo `distance_mode: quadrature`, o codigo aproxima o comprimento do segmento
+q-k integrando G(x(t)). Isso e geodesic-inspired, mas nao resolve uma geodesica
+formal plena.
 
 Baseado em tres papers de Felipe Maya Muniz:
 - **DRM V1.1** - Directional Relational Manifolds com dimensionalidade variavel
@@ -26,7 +28,7 @@ src/drm_transformer/
 +-- config.py                       # DRMTransformerConfig (dataclass, todos os parametros)
 +-- model.py                        # DRMTransformerModel (forward principal)
 +-- layers.py                       # DRMBlock (Attention + FFN + LayerNorm + Residual)
-+-- attention.py                    # GeodesicAttention (distancia sob G(x), multi-head)
++-- attention.py                    # DRMAttention (distancia Riemanniana local/quadrature)
 +-- metric_net.py                   # MetricNet: G(x) diagonal + low-rank semantic axes
 +-- manifold.py                     # Operacoes no manifold (gamma-scaling, coordenadas)
 +-- gravity.py                      # GravityField: massa deforma G(x) via RFF kernel
@@ -94,7 +96,7 @@ configs/scaling/multilingual/       # 12 configs de escala (1M a 640B params)
  |  |  Q, K, V <- LayerNorm(hidden)      |  |
  |  |  G(x) <- MetricNet(hidden)         |  |
  |  |  gravity <- GravityField(mass, G)  |  |
- |  |  dist <- geodesic_dist(Q, K, G)    |  |
+ |  |  dist <- local_or_quad_dist(Q,K,G) |  |
  |  |  gamma <- lorentz_factor(dist)     |  |
  |  |  attn = softmax(-dist * gamma)     |  |
  |  |  out = attn @ V                    |  |
@@ -133,43 +135,50 @@ output = attn_weights @ V
 A distancia entre tokens e medida pelo produto escalar em espaco Euclidiano
 plano. Todos os tokens vivem na mesma geometria.
 
-### DRM Attention (Geodesic Attention)
+### DRM Attention (Low-Rank Riemannian Attention)
 
 ```
-G_x = MetricNet(hidden)                    # Tensor metrico G(x) [B,T,d,d]
-G_x = G_x + gravity_deformation(mass, G)   # Gravidade deforma a metrica
-d_ij = geodesic_distance(Q_i, K_j, G_x)    # Distancia sob G(x)
-gamma_ij = lorentz_factor(d_ij)             # Fator relativistico
-attn_weights = softmax(-d_ij * gamma_ij)    # Proximidade geodesica
+U_x = MetricNet(q_manifold)                 # Fator low-rank de G(x)=I+UU^T
+U_x = gravity_deformation(mass, U_x)        # Gravidade deforma U
+d_ij = local_or_quadrature_distance(q_i,k_j,U_x)
+gamma_ij = lorentz_factor(coords, anchors)  # Fator relativistico aproximado
+attn_weights = softmax(-d_ij / temperature)
 output = attn_weights @ V
 ```
 
-Tokens proximos no manifold (distancia geodesica pequena) recebem mais
-atencao. A geometria e aprendida end-to-end via MetricNet. A gravidade
+Tokens proximos no manifold sob a metrica aprendida recebem mais atencao. A
+geometria e aprendida end-to-end via MetricNet. A gravidade
 dos tokens pesados (alta massa) curva o espaco ao redor, atraindo tokens
 vizinhos. O fator gamma escala adaptativamente a resolucao.
 
-## MetricNet: G(x) Diagonal + Low-Rank Semantic Axes
+Modos de distancia:
+- `distance_mode: local` ou `n_quad: 0`: usa `||q-k||^2 + ||U(q)^T(q-k)||^2`.
+- `distance_mode: quadrature` com `quad_points > 0`: aproxima
+  `length = sum_w sqrt(dx^T G(x_t) dx)` no segmento entre q e k, e usa
+  `length^2` no score de atencao.
+- Geodesica formal plena exigiria resolver o caminho minimizante no campo
+  metrico aprendido; isso ainda nao e implementado.
 
-O tensor metrico G(x) e parametrizado como diagonal + low-rank para
-eficiencia e expressividade:
+## MetricNet: G(x) = I + U(x)U(x)^T Low-Rank
+
+O tensor metrico efetivo e parametrizado como identidade + low-rank para
+eficiencia e estabilidade:
 
 ```
-hidden [B,T,d_model]
+coords [B,T,d_manifold]
     |
     MLP
     |
     v
-diag [B,T,d_manifold]          # Componente diagonal (softplus + epsilon)
-axes [B,T,metric_rank,d_manifold]  # Eixos semanticos low-rank
+U [B,T,d_manifold,metric_rank]
     |
-    G(x) = diag(diag) + axes^T @ axes   # SPD garantido
+    G(x) = I + U(x) U(x)^T   # SPD garantido
 ```
 
 Propriedades:
-- **Diagonal base**: captura escala por dimensao
-- **Low-rank axes**: captura correlacoes semanticas (metric_rank << d_manifold)
-- **SPD garantido**: diag > 0 + outer product sempre positivo semi-definido
+- **Identidade base**: mantem a geometria perto de Euclidiana no inicio
+- **Low-rank axes**: captura correlacoes geometricas (metric_rank << d_manifold)
+- **SPD garantido**: I + outer product sempre positivo definido
 - **d_manifold**: dimensao do manifold (tipicamente 16), independente de d_model
 
 ## GravityField: Massa dos Tokens via RFF Kernel
@@ -265,7 +274,7 @@ Homologia persistente, grafo de Reeb, ARI (Adjusted Rand Index).
 
 ### DRM Marco A - Manifold Attention Tensor Anatomy
 
-Marco diagnostico planejado para analisar a Geodesic Attention como tensores de
+Marco diagnostico planejado para analisar a atencao Riemanniana DRM como tensores de
 alta ordem, inspirado por ITensors.jl / ITensorMPS.jl, mas implementado em
 PyTorch:
 
@@ -307,11 +316,14 @@ SAINT-G grafting, ou otimizacoes futuras da atencao geometrica.
 | d_manifold | int | 16 | Dimensao do manifold epistemico |
 | metric_hidden | int | 64 | Dimensao oculta do MetricNet |
 | metric_rank | int | 4 | Rank dos eixos semanticos low-rank |
-| n_quad | int | 0 | Pontos de quadratura (0=Mahalanobis local) |
+| distance_mode | str | local | `local` ou `quadrature` |
+| quad_points | int | 0 | Pontos de quadratura; herda `n_quad` quando omitido |
+| distance_chunk_size | int | 0 | Chunk opcional para reduzir memoria no modo quadrature |
+| n_quad | int | 0 | Alias legado (0=Mahalanobis local) |
 | n_anchors | int | 6 | Pontos de ancora do campo gravitacional |
 | gamma_enabled | bool | True | Habilita Lorentz gamma-scaling |
 | gamma_c | float | 4.0 | Velocidade limite c para gamma |
-| gamma_alpha | float | 0.0 | Alpha do gamma-scaling |
+| gamma_alpha | float | 1.0 | Alpha do gamma-scaling |
 | temperature_init | float | 1.0 | Temperatura inicial da atencao |
 | temperature_min | float | 0.5 | Temperatura minima |
 | gravity_enabled | bool | True | Habilita campo gravitacional |
